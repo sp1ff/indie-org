@@ -1,0 +1,10 @@
+#+TITLE: README
+#+DESCRIPTION: Org-export on the Indieweb
+#+AUTHOR: Michael
+#+EMAIL: sp1ff@pobox.com
+#+DATE: <2022-07-01 Fri 13:03>
+#+AUTODATE: t
+
+* Introduction
+
+=indie-org= is an [[https://www.gnu.org/software/emacs/Emacs][Emacs]] [[https://www.gnu.org/software/emacs/manual/html_mono/elisp.html#Packaging-Basics][package]] for getting [[https://indieweb.org/static_site_generator][staticly-generated]] web sites published with [[https://orgmode.org/org.html][Org-mode]]'s [[https://orgmode.org/org.html#HTML-Export][HTML Export]] facility onto the [[https://indieweb.org/][Indieweb]]. This project is currently experimental; this is first code. I may publish it to MELPA at some point, so I'm trying to respect both the [[https://www.gnu.org/software/emacs/manual/html_node/elisp/Coding-Conventions.html#Coding-Conventions][GNU]] and [[https://github.com/melpa/melpa/blob/master/CONTRIBUTING.org][MELPA]] coding conventions.

@@ -1,0 +1,12 @@
+#+TITLE: b
+#+DESCRIPTION: Test post 'b'
+#+DATE: <2022-06-20 Mon 06:46>
+#+DRAFT: t
+
+It has been frequently remarked, that it seems to have been reserved
+to the people of this country to decide, by their conduct and example,
+the important question, whether socieites of men are really capable or
+not, of establishing good government from reflection and choice, or
+whether they are forever destined to depend for their political
+constitutions, on accident and force.
+

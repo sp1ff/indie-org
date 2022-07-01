@@ -1,0 +1,10 @@
+*.in
+README
+aclocal.m4
+autom4te.cache
+build-aux
+configure
+*.gz
+*.xz
+*.zst
+env.sh
