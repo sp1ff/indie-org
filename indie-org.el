@@ -3,7 +3,7 @@
 ;; Copyright (C) 2022 Michael Herstine <sp1ff@pobox.com>
 
 ;; Author: Michael Herstine <sp1ff@pobox.com>
-;; Version: 0.0.2
+;; Version: 0.0.3
 ;; Package-Requires: ((emacs "24"))
 ;; Keywords: hypermedia, outlines, wp
 ;; URL: https://www.unwoundstack.com
@@ -28,7 +28,7 @@
 (require 'ox-rss)
 (require 'request)
 
-(defconst indie-org-version "0.0.2")
+(defconst indie-org-version "0.0.3")
 
 (defgroup indie-org nil
   "Org HTML Export on the Indieweb."
@@ -119,19 +119,25 @@ properties to each item that I can use when I publish to HTML."
 	      (let ((link (concat (file-name-sans-extension entry) ".html"))
               (title (org-publish-find-title entry project))
               (date (format-time-string
-                     "%Y-%m-%d"
+                     "%Y-%m-%d %H:%M"
                      (org-publish-find-date entry project)))
-              (dsc (org-publish-find-property entry :description project 'indie-org)))
+              (updated
+               (let ((val
+                      (org-publish-find-property entry :updated project 'indie-org)))
+                 (if val
+                     (format-time-string
+                      "%Y-%m-%d %H:%M"
+                      (org-time-string-to-time (org-element-interpret-data val)))))))
           (with-temp-buffer
             (insert (format "* [[file:%s][%s]]\n" entry title))
             (org-set-property "U_URL" link)
             (org-set-property "P_NAME" title)
             (org-set-property "PUBDATE" date)
             (org-set-property "P_SUMMARY" dsc)
-            (if dsc
+            (if updated
                 (org-set-property
                  "UPDATED"
-                 (org-no-properties (org-element-interpret-data dsc))))
+                 updated))
             (insert
              (format
               "%s\n"
@@ -903,7 +909,6 @@ update the publication state."
       ;; `mentions' is just a list of URLs I've mentioned on this page.
       (indie-org-update-webmentions-made
        page-key
-       ;; (date-to-time (or updated publish-date))
        (or updated publish-date)
        mentions
        webmentions-made))))
