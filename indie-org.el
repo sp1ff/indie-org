@@ -3,7 +3,7 @@
 ;; Copyright (C) 2022 Michael Herstine <sp1ff@pobox.com>
 
 ;; Author: Michael Herstine <sp1ff@pobox.com>
-;; Version: 0.0.1
+;; Version: 0.0.2
 ;; Package-Requires: ((emacs "24"))
 ;; Keywords: hypermedia, outlines, wp
 ;; URL: https://www.unwoundstack.com
@@ -28,30 +28,11 @@
 (require 'ox-rss)
 (require 'request)
 
-(defconst indie-org-version "0.0.1")
+(defconst indie-org-version "0.0.2")
 
 (defgroup indie-org nil
   "Org HTML Export on the Indieweb."
   :group 'org)
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                        utility functions                         ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defun indie-org--get-page-key (info)
-  "Retrieve the page key from the communications channel INFO.
-The \"page key\" is the path of the output file, relative to the
-publication root (so, \"blog/cool-post.html\", for instance).
-
-The channel must have been provisioned with the
-:indie-org/publishing-root property."
-  (let ((output-file (plist-get info :output-file))
-        (project-directory
-         (file-name-as-directory
-          (plist-get info :indie-org/publishing-root))))
-    (and (string-prefix-p project-directory output-file)
-         (substring output-file (length project-directory)))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -172,7 +153,7 @@ It can further be transformed using `org-list-to-generic',
 `org-publish-sitemap-default'.
 
 Suitable for use as an argument to :sitemap-function"
-  (concat "#+TITLE: " title
+  (concat "#+TITLE: " title "\n"
           (org-list-to-subtree list 0 (list :icount "" :istart ""))))
 
 (defun indie-org-publish-to-h-feed (plist filename pub-dir)
@@ -678,7 +659,7 @@ Presumably called during publication.  INFO is a plist used as a
 communications channel.  WEBMENTIONS-RECEIVED is a hash table matching
 page key to webmentions."
   (gethash
-   (indie-org--get-page-key info)
+   (indie-org-get-page-key info)
    (plist-get webmentions-received :mentions)))
 
 ;; <https://github.com/aaronpk/webmention.io/blob/45a06629e59d56efdba1ce39936e61b81fc92d97/helpers/formats.rb#L169>
@@ -907,7 +888,7 @@ grab all webmentions from the :indie-org/mentions INFO property and
 update the publication state."
   (when (org-export-derived-backend-p backend 'indie-org)
     (let* ((mentions (plist-get info :indie-org/mentions))
-           (page-key (indie-org--get-page-key info))
+           (page-key (indie-org-get-page-key info))
            (webmentions-made (plist-get info :indie-org/webmentions-made))
            (input-file (plist-get info :input-file))
            (publish-date
@@ -956,6 +937,20 @@ TOKEN is the telegraph.io API token."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                         public functions                         ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun indie-org-get-page-key (info)
+  "Retrieve the page key from the communications channel INFO.
+The \"page key\" is the path of the output file, relative to the
+publication root (so, \"blog/cool-post.html\", for instance).
+
+The channel must have been provisioned with the
+:indie-org/publishing-root property."
+  (let ((output-file (plist-get info :output-file))
+        (project-directory
+         (file-name-as-directory
+          (plist-get info :indie-org/publishing-root))))
+    (and (string-prefix-p project-directory output-file)
+         (substring output-file (length project-directory)))))
 
 (defun indie-org-read-token (filename)
   "Read a token from FILENAME."

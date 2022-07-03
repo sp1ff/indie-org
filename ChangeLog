@@ -1,3 +1,10 @@
+2022-07-03  Michael Herstine  <sp1ff@pobox.com>
+
+	Minor updates.
+	    - make `indie-org--get-page-key` public
+	    - fixed a bug in `indie-org--format-h-feed-sitemap` where the
+	      newline after the title was missing
+
 2022-07-01  Michael Herstine  <sp1ff@pobox.com>
 
 	Initial commit of `indie-org`.

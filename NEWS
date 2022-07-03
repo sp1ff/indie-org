@@ -1,5 +1,11 @@
 indie-org News -- history of user-visible changes                -*- outline -*-
 
-* 0.0.1 release:
+* 0.0.2 release
+
+** Fixed a bug in indie-org--format-h-feed-sitemap
+Missing newline after title.
+** Made indie-org--get-page-key public
+Renamed to indie-org-get-page-key
+* 0.0.1 release
 
 Initial release.
