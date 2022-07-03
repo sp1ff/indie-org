@@ -3,7 +3,7 @@
 ;; Copyright (C) 2022 Michael Herstine <sp1ff@pobox.com>
 
 ;; Author: Michael Herstine <sp1ff@pobox.com>
-;; Version: 0.0.3
+;; Version: 0.0.4
 ;; Package-Requires: ((emacs "24"))
 ;; Keywords: hypermedia, outlines, wp
 ;; URL: https://www.unwoundstack.com
@@ -28,7 +28,7 @@
 (require 'ox-rss)
 (require 'request)
 
-(defconst indie-org-version "0.0.3")
+(defconst indie-org-version "0.0.4")
 
 (defgroup indie-org nil
   "Org HTML Export on the Indieweb."
@@ -920,23 +920,22 @@ is the target.
 TOKEN is the telegraph.io API token."
   (let (rsp)
     (request "https://telegraph.p3k.io/webmention"
+      :type "POST"
       :sync t
       :data (list (cons "source" (car wm))
                   (cons "target" (cdr wm))
                   (cons "token" token))
-      :parser json-read
+      :parser #'json-read
       :error (cl-function
-              (lambda (&rest args &key error-thrown &allow-other-keys)
-                (setq rsp error-thrown)))
+              (lambda (&key error-thrown &allow-other-keys)
+                (error "While sending webmention %s :=> %s, got %s"
+                       (car wm) (cdr wm) rsp)))
       :success (cl-function
 	              (lambda (&key data &allow-other-keys)
 	                (setq rsp data))))
-    (unless (listp rsp)
-      (error "While sending webmention %s :=> %s, got %s"
-             (car wm) (cdr wm) rsp))
-    ;; `rsp' should be an alist with properties "status" and "location"
+    ;; `rsp' should be an alist with properties 'status and 'location
     (message "%s :=> %s (%s)." (car wm) (cdr wm) rsp)
-    (alist-get "location" rsp)))
+    (alist-get 'location rsp)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -998,8 +997,8 @@ to be excluded-- this is handy for sitemaps, e.g."
      (lambda (dirent)
        (if (and (not (member dirent excludes))
                 (or (not exclude-drafts)
-                    (org-publish-find-property
-                     dirent :draft pseudo-project 'indie-org)))
+                    (not (org-publish-find-property
+                          dirent :draft pseudo-project 'indie-org))))
            (setq out (cons dirent out))))
      (directory-files project-dir nil ".*\\.org$"))
     out))

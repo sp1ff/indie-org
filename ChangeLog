@@ -1,5 +1,12 @@
 2022-07-03  Michael Herstine  <sp1ff@pobox.com>
 
+	Bugfix commit. This commit
+	    - fixes a bug in `indie-org-find-posts` that inadvertently
+	      included *only* drafts in prod
+	    - fixes a bug in `indie-org-send-webmention` in which I took
+	      the keys in the returned alist to be strings, when they are
+	      in fact symbols
+
 	Fixed bug in `indie-org--format-entry-for-h-feed` wherein the :updated property was not being properly handled.
 
 	Minor updates.
