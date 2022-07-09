@@ -3,7 +3,7 @@
 ;; Copyright (C) 2022 Michael Herstine <sp1ff@pobox.com>
 
 ;; Author: Michael Herstine <sp1ff@pobox.com>
-;; Version: 0.0.4
+;; Version: 0.1.0
 ;; Package-Requires: ((emacs "24"))
 ;; Keywords: hypermedia, outlines, wp
 ;; URL: https://www.unwoundstack.com
@@ -28,7 +28,7 @@
 (require 'ox-rss)
 (require 'request)
 
-(defconst indie-org-version "0.0.4")
+(defconst indie-org-version "0.1.0")
 
 (defgroup indie-org nil
   "Org HTML Export on the Indieweb."
@@ -89,17 +89,34 @@ is the current project."
 	     (t entry)))))
 
 (defun indie-org--format-rss-sitemap (title list)
-  "Generate the RSS sitemap file."
-  (concat
-   "#+TITLE: "
-   title
-   "\n"
+  "Generate the RSS sitemap file.
+TITLE shall be the RSS 2.0 title.  LIST shall be a representation
+of the files and directories involved in the project as a nested
+list."
+  (concat "#+TITLE: " title "\n"
    (org-list-to-subtree list 0 (list :icount "" :istart ""))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                          h-feed support                          ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun indie-org-publish-to-h-feed (plist filename pub-dir)
+  "Publish an h-feed with PLIST, only when FILENAME is the sitemap file.
+PUB-DIR is when the output will be placed."
+  (let ((sitemap-filename (plist-get plist :sitemap-filename)))
+    (if (equal sitemap-filename (file-name-nondirectory filename))
+        (let ((bf (get-file-buffer filename)))
+          (if bf
+	            (with-current-buffer bf
+	              (write-file filename))
+            (find-file filename)
+            (write-file filename)
+            (kill-buffer))
+          (org-publish-org-to
+           (plist-get plist :h-feed-backend)
+           filename ".html"
+           plist pub-dir)))))
 
 (defun indie-org--format-entry-for-h-feed (entry style project)
   "Format ENTRY for an h-feed.
@@ -162,27 +179,17 @@ Suitable for use as an argument to :sitemap-function"
   (concat "#+TITLE: " title "\n"
           (org-list-to-subtree list 0 (list :icount "" :istart ""))))
 
-(defun indie-org-publish-to-h-feed (plist filename pub-dir)
-  "Publish an h-feed with PLIST, only when FILENAME is the sitemap file.
-PUB-DIR is when the output will be placed."
-  (let ((sitemap-filename (plist-get plist :sitemap-filename)))
-    (if (equal sitemap-filename (file-name-nondirectory filename))
-        (let ((bf (get-file-buffer filename)))
-          (if bf
-	            (with-current-buffer bf
-	              (write-file filename))
-            (find-file filename)
-            (write-file filename)
-            (kill-buffer))
-          (org-publish-org-to
-           (plist-get plist :h-feed-backend)
-           filename ".html"
-           plist pub-dir)))))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                    publication state support                     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                  publication state support                   ;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                             overview                             ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 
 ;; Supporting various Indieweb features such as Webmentions requires
 ;; maintaining state regarding site publication. IOW, every time one
@@ -201,99 +208,136 @@ PUB-DIR is when the output will be placed."
 ;;        :webmentions-made <web mentions made>
 ;;        :webmentions-sent <web mentions sent>
 ;;        :webmentions-received <web mentions received>
+;;        :posse-requests <posse requests>
+;;        :posse-responses <posse responses>
 ;;        :syndication-links <syndication links))
 
-;; Throughout state is index by an "environment".  For my personal
-;; site, this is :prod (the live site) or :staging (a local copy I
-;; use for testing).  These are arbitrary & user-defined.
+;; Throughout state is indexed by an "environment".  For my personal
+;; site, this is :prod (the live site) or :staging (a local copy I use
+;; for testing).  These are arbitrary & user-defined.
 
-;; Another concept used throughout is that of a "page key"; from
-;; the perspective of publication state, this need merely be any
-;; identifier which can be derived from a page.  In practice, this
-;; should be the relative path of the page as published.
+;; The exceptions are :webmentions-received and :posse-responses,
+;; which can only exist for :prod.
+
+;; Another concept used throughout is that of a "page key"; from the
+;; perspective of publication state, this need merely be any
+;; identifier which can be derived from a page and that uniquely
+;; identifies it within the site.  In practice, this should be the
+;; relative path of the page as published.
 
 ;; Next is the concept of "most recent update".  Org mode defines the
 ;; :date property for each document.  `indie-org' interprets that as
 ;; "publication date", and goes on to add a new property :updated,
 ;; which is interpreted as the most recent update of the page.
 
-;; Details of each property:
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                    details of each property:                     ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; - serialization format version :: this is the version number for
-;;   the serialization format to ease its evolution; I just use an
-;;   integer
+;;                    serialization format version                  ;;
+
+;; serialization format version :: this is the version number for the
+;; serialization format to ease its evolution; I just use an integer.
 
 (defconst indie-org-pub-state-serde-current-format 1
   "The most recent publication state serialization format.")
 
-;; - last published timestamp :: a property list mapping environment
-;;   to a Lisp timestamp at which the site was last published to that
-;;   environment
-;;
-;;   e.g. '(:staging (25261 61056 485925 324000))
+;;                          last published                          ;;
 
-;; - webmentions-made :: a property list mapping environment to a hash
-;;   table mapping page keys to a second hash table which in turn maps
-;;   update time to webmention targets on that page
+;; last published timestamp :: a property list mapping environment to
+;; a Lisp timestamp at which the site was last published to that
+;; environment; e.g. '(:staging (25261 61056 485925 324000))
 
-;;   schematically:
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                           webmentions                            ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;       '(:prod
-;;           <hash: page-key :=> <hash: pub/update time :=> (mention...)>>
-;;         :staging
-;;           <hash: page-key :=> <hash: pub/update time :=> (mention...)>>
-;;         ...)
+;;                         webmentions made                         ;;
 
-;; - webmentions-sent :: a property list mapping environemnt to a hash
-;;   table mapping page keys to a second hash table which in turn maps
-;;   webmention targets to a list of `indie-org-sent-wm' instances
-;;   representing webmentions sent for that (source, target) pair.
+;; webmentions-made :: a property list mapping environment to a hash
+;; table mapping page keys to a second hash table which in turn maps
+;; update time to webmention targets on that page
 
-;;   There may exist multiple webmentions for a given (source, target)
-;;   pair for a few reasons: the source was updated, for instance.
+;; Schematically:
 
-;;   It may seem surprising to maintain a separate collection for each
-;;   environment-- why not just one, like :webmentions-received. The
-;;   reason I do this is to support different ways of "sending"
-;;   webmentions on a per-environment basis: telegraph.io for prod,
-;;   and "dry-run" for staging, e.g.
+;;     '(:prod
+;;         <hash: page-key :=> <hash: pub/update time :=> (mention...)>>
+;;       :staging
+;;         <hash: page-key :=> <hash: pub/update time :=> (mention...)>>
+;;       ...)
 
-;;   schematically:
+;; NB: There is no need to encode the precise nature of the webmention
+;; (i.e. wehther it's a reply, a like, or whatever) here; that
+;; information is encoded into the page itself where it can be
+;; discovered by the recipient.
 
-;;       '(:prod
-;;           <hash: page-key :=> <hash: mention :=> (wm-sent ...)>>
-;;         :staging
-;;           <hash: page-key :=> <hash: mention :=> (wm-sent ...)>>
-;;         ...)
+;;                         webmentions sent                         ;;
+
+;; webmentions-sent :: a property list mapping environemnt to a hash
+;; table mapping page keys to a second hash table which in turn maps
+;; webmention targets to a list of `indie-org-sent-wm' instances
+;; representing webmentions sent for that (source, target) pair.
+
+;; There may exist multiple webmentions for a given (source, target)
+;; pair for a few reasons: the source was updated, for instance.
+
+;; It may seem surprising to maintain a separate collection for each
+;; environment-- why not just one, like :webmentions-received. The
+;; reason I do this is to support different ways of "sending"
+;; webmentions on a per-environment basis: telegraph.io for prod,
+;; and "dry-run" for staging, e.g.
+
+;; schematically:
+
+;;     '(:prod
+;;         <hash: page-key :=> <hash: mention :=> (wm-sent ...)>>
+;;       :staging
+;;         <hash: page-key :=> <hash: mention :=> (wm-sent ...)>>
+;;       ...)
 
 (cl-defstruct (indie-org-sent-wm
                ;; Disable the default ctor (the name violates Emacs
                ;; package naming conventions)
                (:constructor nil)
-               ;; LATER(sp1ff): I'm staying loose on the validation
-               ;; until I beter understand the requirements on this
-               ;; type
+               ;; Abuse the &aux keyword to validate our parameters; I
+               ;; can only specify type in the slot description if I
+               ;; specify a default value for the slot, which doesn't
+               ;; always make sense.
                (:constructor
                 indie-org-make-sent-wm
-                (&key source target time-sent status kind)))
-  "Sent webmention."
+                (&key source target time-sent status kind
+                      &aux
+                      (_
+                       (unless (and source (stringp source))
+                         (error "Source shall be a string (%s)" source))
+                       (unless (and target (stringp target))
+                         (error "Target shall be a string (%s)" target))
+                       (unless (and time-sent (listp time-sent))
+                         (error "Sent time shall be a Lisp timestamp (%s)" time-sent))))))
+  "Sent webmention. SOURCE is the URL of the sending page, TARGET
+that of the recipient.  TIME-SENT is a Lisp timestamp
+representing the time at which the webmention was sent.  STATUS
+is an optional status attribute (for telegraph.io, e.g., it could
+be the location header from the response).  KIND is the
+webmention kind (generic mention, reply, and so forth) as a
+keyword."
   source target time-sent status kind)
 
-;; - webmentions-received :: a property list containing :last-checked
-;;   (the last time webmentions were checked), :last-id (the
-;;   most-recent webmention ID received), and :mentions: a hash table
-;;   mapping page key to a list of `indie-org-received-wm' instances
-;;   representing received webmentions.  Note that unlike other
-;;   attributes, webmentions-received is *not* keyed by environment;
-;;   it is assumed that you are using indie-org with a single domain.
+;;                       webmentions received                       ;;
+
+;; webmentions-received :: a property list containing :last-checked
+;; (the last time webmentions were checked), :last-id (the most-recent
+;; webmention ID received), and :mentions: a hash table mapping page
+;; key to a list of `indie-org-received-wm' instances representing
+;; received webmentions.  Note that unlike other attributes,
+;; webmentions-received is *not* keyed by environment; it is assumed
+;; that you are using indie-org with a single domain and that these
+;; correspond to actual webmentions recieved "in the wild"
 
 (cl-defstruct (indie-org-received-wm-author
                ;; Disable the default ctor (the name violates Emacs
                ;; package naming conventions)
                (:constructor nil)
-               ;; LATER(sp1ff): I'm staying loose on the validation
-               ;; until I beter understand the requirements on this
-               ;; type
                (:constructor
                 indie-org-make-received-wm-author
                 (&key name photo type url)))
@@ -304,9 +348,6 @@ PUB-DIR is when the output will be placed."
                ;; Disable the default ctor (the name violates Emacs
                ;; package naming conventions)
                (:constructor nil)
-               ;; LATER(sp1ff): I'm staying loose on the validation
-               ;; until I beter understand the requirements on this
-               ;; type
                (:constructor
                 indie-org-make-received-wm-content
                 (&key html text)))
@@ -327,8 +368,64 @@ PUB-DIR is when the output will be placed."
   "Received webmention."
   id sort time-received source target author content private)
 
-;; - syndication links: a property list mapping environment to a hash
-;;   table mapping page keys to syndicated copies of this post
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                              POSSE                               ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;                          posse requests                          ;;
+
+;; posse-requests: a property list mapping environment to a hash table
+;; mapping page keys to a list of POSSE targets for that page.
+;; Targets are the POSSE keywords :twitter, :mastodon &c.
+
+;; schematically:
+
+;;     '(:prod
+;;         <hash: page-key :=> (target...)>
+;;       :staging
+;;         <hash: page-key :=> (target...)>
+;;       ...)
+
+;;                         posse responses                          ;;
+
+;; posse-responses: a hash table mapping page keys to a list of
+;; `indie-org-posse-response' instances.  Similar to
+;; :webmentions-received, this is not a property list keyed by
+;; environment.  If a post has been POSSE'd, then it's been POSSE'd,
+;; regardless of where we're publishing.
+
+(cl-defstruct (indie-org-posse-response
+               ;; Disable the default ctor (the name violates Emacs
+               ;; package naming conventions)
+               (:constructor nil)
+               ;; Abuse the &aux keyword to validate our parameters; I
+               ;; can only specify type in the slot description if I
+               ;; specify a default value for the slot, which doesn't
+               ;; always make sense.
+               (:constructor
+                indie-org-make-posse-response
+                (&key sort created-at id text url
+                      &aux
+                      (_
+                       (unless (memq sort '(:twitter :mastodon :reddit))
+                         (error "Unknown POSSE target %s" sort))
+                       (unless (and created-at (stringp created-at))
+                         (error "Created-at shall be a string"))
+                       (unless (and id (stringp id))
+                         (error "Id shall be a string"))
+                       (unless (and url (stringp url))
+                         (error "URL shall be a string"))))))
+  "Response from brid.gy.  SORT is a keyword naming the
+silo (:twitter, :mastodon & so on).  CREATED-AT is a Lisp
+timestamp reprensenting the time at which the siloed entity was
+created, ID it's silo-defined identifer, TEXT the text comprising
+the siloed entity and URL it's, well, URL."
+  sort created-at id text url)
+
+;;                        syndication links                         ;;
+
+;; syndication links: a property list mapping environment to a hash
+;; table mapping page keys to syndicated copies of this post
 
 (cl-defstruct (indie-org-syndicated-copy
                ;; Disable the default ctor (the name violates Emacs
@@ -348,6 +445,11 @@ PUB-DIR is when the output will be placed."
   "A syncidated copy of a post"
   silo url type id)
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                     publication state serde                      ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defun indie-org-make-publication-state ()
   "Create a fresh, uninitialized copy of publication state."
   (list
@@ -357,6 +459,8 @@ PUB-DIR is when the output will be placed."
    :webmentions-received
    (list :last-checked nil :last-id nil
          :mentions (make-hash-table :test 'equal))
+   :posse-requests nil
+   :posse-responses nil
    :syndication-links nil))
 
 (defun indie-org-read-publication-state (filename)
@@ -443,6 +547,15 @@ itself heavily derivative of `basic-save-buffer-2'."
     :state state)
    file-name))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                          last published                          ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun indie-org-get-last-published (state &optional env)
+  "Retrieve the last-published time in STATE for ENV."
+  (let ((env (or env :prod)))
+    (plist-get (plist-get state :last-published) env)))
+
 (defun indie-org-update-last-published (state time &optional env)
   "Update the last-published time in STATE to TIME for ENV.
 
@@ -454,52 +567,21 @@ Returns the new state."
            env time)))
     (plist-put state :last-published new-last-pub)))
 
-(defun indie-org-get-last-published (state &optional env)
-  "Retrieve the last-published time in STATE for ENV."
-  (let ((env (or env :prod)))
-    (plist-get (plist-get state :last-published) env)))
-
-(defun indie-org-set-webmentions-made (state hash &optional env)
-  "Update the webmentions-made hash table for ENV.
-
-Returns the new state."
-  (let* ((env (or env :prod))
-         (plist (plist-get state :webmentions-made)))
-    (setq plist (plist-put plist env hash))
-    (plist-put state :webmentions-made plist)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                         webmentions made                         ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun indie-org-get-webmentions-made (state &optional env)
   "Retrieve the :webmentions-made hash table from STATE.
 ENV is the environment of interest.
 
-If none, return a new hash table."
+If none, return a new hash table.  Since the caller can't know
+whether the returned hash table is new or not, he should always
+call `indie-org-set-webmentions-made' after updating, to ensure
+that any changes make it into the publication state."
   (let ((env (or env :prod)))
     (or (plist-get (plist-get state :webmentions-made) env)
         (make-hash-table :test 'equal))))
-
-(defun indie-org-set-webmentions-sent (state hash &optional env)
-  "Update the webmentions-sent hash table for ENV.
-STATE is the :webmentions-sent property list.  HASH is a
-hash table mapping page key to inner hash.
-
-Returns the new state."
-  (let* ((env (or env :prod))
-         (plist (plist-get state :webmentions-sent)))
-    (setq plist (plist-put plist env hash))
-    (plist-put state :webmentions-sent plist)))
-
-(defun indie-org-get-webmentions-sent (state &optional env)
-  "Retrieve the :webmentions-sent hash table from STATE.
-ENV is the environment of interest.
-
-If none, return a new hash table."
-  (let ((env (or env :prod)))
-    (or (plist-get (plist-get state :webmentions-sent) env)
-        (make-hash-table :test 'equal))))
-
-(defun indie-org-get-webmentions-received (state)
-  "Retrieve the :webmentions-received plist from STATE."
-  (plist-get state :webmentions-received))
 
 (defun indie-org-update-webmentions-made (page time mentions sub-state)
   "Update SUB-STATE with WEBMENTIONS for PAGE at TIME.
@@ -527,9 +609,31 @@ in SUB-STATE, just overwrite that entry."
     (puthash time mentions previous-mentions)
     nil))
 
-(defun indie-org-update-webmentions-received (state webmentions-received)
-  "Update STATE with WEBMENTIONS-RECEIVED."
-  (plist-put state :webmentions-received webmentions-received))
+(defun indie-org-set-webmentions-made (state hash &optional env)
+  "Update the webmentions-made hash table for ENV.
+STATE is the publication state.  HASH is a hash table.
+
+Returns the new publication state."
+  (let* ((env (or env :prod))
+         (plist (plist-get state :webmentions-made)))
+    (setq plist (plist-put plist env hash))
+    (plist-put state :webmentions-made plist)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                         webmentions sent                         ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun indie-org-get-webmentions-sent (state &optional env)
+  "Retrieve the :webmentions-sent hash table from STATE.
+ENV is the environment of interest.
+
+If none, return a new hash table.  Since the caller can't know
+whether the returned hash table is new or not, he should always
+call `indie-org-set-webmentions-made' after updating, to ensure
+that any changes make it into the publication state."
+  (let ((env (or env :prod)))
+    (or (plist-get (plist-get state :webmentions-sent) env)
+        (make-hash-table :test 'equal))))
 
 (defun indie-org-required-webmentions (mentions-made mentions-sent)
   "Determine which mentions still need to be sent.
@@ -654,6 +758,121 @@ mapping target to a list of `indie-org-sent-wm'."
         (puthash dest (list sent-wm) source-sents)
         (puthash source source-sents sub-state)))))
 
+(defun indie-org-set-webmentions-sent (state hash &optional env)
+  "Update the webmentions-sent hash table for ENV.
+STATE is the :webmentions-sent property list.  HASH is a
+hash table mapping page key to inner hash.
+
+Returns the new publication state."
+  (let* ((env (or env :prod))
+         (plist (plist-get state :webmentions-sent)))
+    (setq plist (plist-put plist env hash))
+    (plist-put state :webmentions-sent plist)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                       webmentions received                       ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun indie-org-get-webmentions-received (state)
+  "Retrieve the :webmentions-received plist from STATE."
+  (plist-get state :webmentions-received))
+
+(defun indie-org-update-webmentions-received (state webmentions-received)
+  "Update STATE with WEBMENTIONS-RECEIVED.
+
+Returns the new publication state."
+  (plist-put state :webmentions-received webmentions-received))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                          posse requests                          ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun indie-org-get-posse-requests (state &optional env)
+  "Retrieve the :posse-requests for ENV from STATE.
+STATE is the publication state.
+
+If none, return a new hash table.  Since the caller can't know
+whether the returned hash table is new or not, he should always
+call `indie-org-set-webmentions-made' after updating, to ensure
+that any changes make it into the publication state."
+  (let ((env (or env :prod))
+        (pr (plist-get state :posse-requests)))
+    (or (and pr (plist-get pr env))
+        (make-hash-table :test 'equal))))
+
+(defun indie-org-set-posse-requests (state hash &optional env)
+  "Update the posse-requests hash table for ENV.
+STATE is the current publication state.  HASH is a hash table.
+
+Returns the new publication state."
+  (let* ((env (or env :prod))
+         (plist (plist-get state :posse-requests)))
+    (setq plist (plist-put plist env hash))
+    (plist-put state :posse-requests plist)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                         posse responses                          ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun indie-org-get-posse-responses (state)
+  "Retrieve the :posse-responses from STATE.
+STATE is the publication state.
+
+If none, return a new hash table.  Since the caller can't know
+whether the returned hash table is new or not, he should always
+call `indie-org-set-webmentions-made' after updating, to ensure
+that any changes make it into the publication state."
+  (or (plist-get state :posse-responses)
+      (make-hash-table :test 'equal)))
+
+(defun indie-org-required-posses (requests responses)
+  "Determine the set of POSSE requests to be made.
+REQUESTS shall be a hash from page key a list of POSSE
+targets ('twitter, 'mastodon, and so on).  RESPONSES shall be
+collection of previously completed POSSE requests, in the form of
+a hash table mapping page keys to lists of
+`indie-org-posse-response' instances.
+
+Return a list of cons cells, each of whose car is a page key
+and whose cdr is a list of POSSE symbols."
+  (let ((results))
+    ;; Walk REQUESTS...
+    (maphash
+     ;; and for each page key/list of POSSE targets...
+     (lambda (page-key required)
+       ;; build a list of POSSE responses
+       (let* ((resp
+               (mapcar
+                #'indie-org-posse-response-sort
+                (gethash page-key responses)))
+              (needed
+               (cl-set-difference
+                required
+                resp
+                :test 'equal)))
+         (if needed (setq results (cons (cons page-key needed) results)))))
+     requests)
+    results))
+
+(defun indie-org-record-sent-posse (page-key response posse-responses)
+  "Record a POSSE RESPOSNE to PAGE-KEY.
+POSSE-RESPONSES shall be a hash of page-key to lists of
+previously received respones."
+  (let ((curr (gethash page-key posse-responses)))
+    (if (not (member response curr))
+        (puthash
+         page-key
+         (cons response curr)
+         posse-responses))))
+
+(defun indie-org-set-posse-responses (state hash)
+  "Update the posse-requests hash table.
+STATE is the publication state.  HASH is a hash table matching a
+list of `indie-org-posse-response' instances.
+
+Returns the new publication state."
+  (plist-put state :posse-responses hash))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                support for receiving webmentions                 ;;
@@ -670,7 +889,7 @@ page key to webmentions."
 
 ;; <https://github.com/aaronpk/webmention.io/blob/45a06629e59d56efdba1ce39936e61b81fc92d97/helpers/formats.rb#L169>
 (defun indie-org-string-to-wm-sort (text)
-  "Convert the 'wm-property' string returned from webmention.io to keyword."
+  "Convert the 'wm-property' string TEXT returned from webmention.io to keyword."
   (cond
    ((string= text "mention-of") :mention)
    ((string= text "in-reply-to") :reply)
@@ -680,7 +899,7 @@ page key to webmentions."
    (t (error "Unknown webmention type %s" text))))
 
 (defun indie-org-wm-sort-to-verb (sort)
-  "Convert a mention type keyword to a verb."
+  "Convert a mention type keyword SORT to a verb."
   (cond
    ((eq sort :mention) "mentioned")
    ((eq sort :reply) "replied to")
@@ -691,6 +910,7 @@ page key to webmentions."
 
 (defun indie-org-check-webmentions (domain token state)
   "Check for new webmentions for DOMAIN.
+TOKEN shall be your webmention.io token.
 
 STATE shall be the property list corresponding to
 :webmentions-received in the publication state.  IOW it itself
@@ -707,8 +927,6 @@ Return the new plist."
          (request-params
           (let ((init (list (cons "domain" domain) (cons "token" token))))
             (if last-id
-                ;; LATER(sp1ff): I assume `request' can handle
-                ;; non-strings in it's :params field
                 (cons (cons "since_id" last-id) init)
               init)))
          (mentions (plist-get state :mentions))
@@ -847,8 +1065,10 @@ Update the communications channel property :indie-org/mentions with LINK."
   (browse-url path))
 
 (defun indie-org-export-mention (link description backend info)
-  "Export a generic webmention LINK/DESCRIPTION for backend
-BACKEND with INFO.
+  "Export a generic webmention.
+LINK & DESCRIPTION are as for any Org link.
+BACKEND shall be the Org Export backend.
+INFO is a plist used as a communications channel during export.
 
 Link export functions are invoked with:
 
@@ -887,6 +1107,8 @@ Link export functions are invoked with:
 
 (defun indie-org-finalize-page (backend info)
   "Collect all webmentions & update state.
+BACKEND is the Org export backend.
+INFO is a plist used as a communications channel.
 
 Callers should arrange to call this function after each page is
 exported (the final-output filter would be a good place).  It will
@@ -913,6 +1135,11 @@ update the publication state."
        mentions
        webmentions-made))))
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                          POSSE support                           ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defun indie-org-send-webmention (wm token)
   "Send a Webmention via telegraph.io.
 WM shall be a cons cell whose car is the source page & whose cdr
@@ -936,6 +1163,99 @@ TOKEN is the telegraph.io API token."
     ;; `rsp' should be an alist with properties 'status and 'location
     (message "%s :=> %s (%s)." (car wm) (cdr wm) rsp)
     (alist-get 'location rsp)))
+
+(defun indie-org-send-posse-request (source posse-target)
+  "Send a POSSE request to brid.gy.
+SOURCE is the page to be published (i.e. its full URL).
+POSSE-TARGET is one of :twitter or :mastodon.  TOKEN is my brid.gy token.
+
+Note that SOURCE will need to have a (possibly empty) link to the
+brid.gy webmention endpoint corresponding to target on the page
+somewhere for the webmention we're about to send to be
+accepted (<a href=\"https://brid.gy/publish/twitter\"></a>, e.g.).
+
+Return an indie-org-posse-response."
+  (let ((target (indie-org-posse-target-to-wm-target posse-target))
+        (rsp))
+    (request "https://brid.gy/publish/webmention"
+      :type "POST"
+      :sync t
+      :data (list (cons "source" source)
+                  (cons "target" target))
+      :parser #'json-read
+      :complete (cl-function
+                 (lambda (&key data error-thrown symbol-status response &allow-other-keys)
+                   (cond
+                    ((eq symbol-status 'success)
+                     (setq rsp
+                           (indie-org-make-posse-response
+                            :sort posse-target
+                            :created-at (alist-get 'created_at data)
+                            :id (alist-get 'id data)
+                            :text (alist-get 'text data)
+                            :url (alist-get 'url data))))
+                    ((eq symbol-status 'error)
+                     (let* ((original (alist-get 'original data)))
+                       (if original
+                           (setq rsp (indie-org-make-posse-response
+                                      :sort posse-target
+                                      :created-at (alist-get 'created_at original)
+                                      :id (alist-get 'id original)
+                                      :text (alist-get 'text original)
+                                      :url (alist-get 'url original)))
+                         (error "Unrecognized error!"))))
+                    (t
+                     (message "While sending POSSE request %s :=> %s, got:" source target)
+                     (message "    data: %s" data)
+                     (message "  symbol: %s" symbol-status)
+                     (message "response: %s" error-thrown)
+                     ;; symbol-status: one of success/error/timeout/abort/parse-error
+                     (error "Unexpected result while sending POSSE request: %s" symbol-status))))))
+    rsp))
+
+(defun indie-org-string-to-posse-target (text)
+  "Convert a #+POSSE value TEXT to keyword."
+  (cond
+   ((string= text "twitter") :twitter)
+   ((string= text "mastodon") :mastodon)
+   ((string= text "github") :github)
+   ((string= text "flickr") :flickr)
+   ((string= text "reddit") :reddit)
+   (t (error "Unknown POSSE target %s" text))))
+
+(defun indie-org-posse-target-to-wm-target (target)
+  "Convert a POSSE keyword to the corresponding webmention target at brid.gy.
+TARGET shall be a keyword (:twitter, e.g.)"
+  (concat
+   "https://brid.gy/publish/"
+   (cond
+    ((eq target :twitter) "twitter")
+    ((eq target :mastodon) "mastodon")
+    ((eq target :reddit) "reddit")
+    ((eq target :github) "github")
+    ((eq target :flickr) "flickr")
+    (t (error "Unknown POSSE target %s" target)))))
+
+(defun indie-org-posse-target-to-string (target)
+  "Convert a POSSE TARGET keyword to a human-friendly string."
+  (cond
+    ((eq target :twitter) "Twitter")
+    ((eq target :mastodon) "Mastodon")
+    ((eq target :github) "Github")
+    ((eq target :flickr) "Flickr")
+    ((eq target :reddit) "Reddit")
+    (t (error "Unknown POSSE target %s" target))))
+
+(defun indie-org-record-posse-request (posse-targets page-key posse-requests)
+  "Record one or more POSSE targets.
+POSSE-TARGETS is a space-delimited list of POSSE
+targets ('twitter, 'mastodon, and so forth).
+PAGE-KEY is the key naming the page to be POSSE'd.
+POSSE-REQUESTS is a hash table mapping page-key to POSSE requests."
+  (puthash
+   page-key
+   (mapcar #'indie-org-string-to-posse-target (split-string posse-targets))
+   posse-requests))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -964,6 +1284,8 @@ The channel must have been provisioned with the
 
 (defun indie-org-plain-text (contents info)
   "Convert plain text into html encoded text.
+CONTENTS shall be Org-down.
+INFO is a plist used as a communications channel.
 
 Shamelessly copied from `ox-rss.el'"
   (let (output)
@@ -1082,7 +1404,8 @@ DRAFT & UPDATED keywords."
     ;;           which can then be transcoded with, e.g.,
     ;;           ‘org-export-data’.  It implies ‘space’ behavior.
     :options-alist '((:draft "DRAFT" nil nil t)
-                     (:updated "UPDATED" nil nil parse)))
+                     (:updated "UPDATED" nil nil parse)
+                     (:posse "POSSE" nil nil space)))
   (org-export-define-derived-backend 'indie-org-h-feed 'html
     ;; h-feed core properties
     :options-alist

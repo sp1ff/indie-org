@@ -109,6 +109,60 @@
           old-made
           new-made))))))
 
+(ert-deftest test-pub-state-posse-sent ()
+  "Smoke test for POSSE requests sent."
+  (let* ((state (indie-org-make-publication-state))
+         (requests (indie-org-get-posse-requests state))
+         (responses (indie-org-get-posse-responses state))
+         (state-file (make-temp-file "indie-org-test-")))
+    ;; Record a few POSSE requests
+    (indie-org-record-posse-request "twitter mastodon" "index.html" requests)
+    (indie-org-record-posse-request "reddit" "mp3.html" requests)
+    (should (eq 2 (hash-table-count requests)))
+
+    (let ((to-send (indie-org-required-posses requests responses)))
+      (should (eq 2 (length to-send))) ;; two pages :=> requests
+      ;; Fake sending one & check that it gets recorded properly
+      (indie-org-record-sent-posse
+       "index.html"
+       (indie-org-make-posse-response
+        :sort :twitter
+        :created-at"Tue Jul 05 00:15:32 +0000 2022"
+        :id "1544112708181794821"
+        :text"unwoundstack can now send &amp; receive Webmentions: https://t.co/23cPkyQoZ0"
+        :url "https://twitter.com/unwoundstack/status/1544112708181794821")
+       responses)
+      (let ((to-send
+             (indie-org-required-posses requests responses)))
+        (should (eq 2 (length to-send))) ;; two pages :=> requests
+        ;; Fake recording the other one for index.html
+        (indie-org-record-sent-posse
+         "index.html"
+         (indie-org-make-posse-response
+          :sort :mastodon
+          :created-at"Tue Jul 05 00:16:32 +0000 2022"
+          :id "1544112708181794822"
+          :text"unwoundstack can now send &amp; receive Webmentions: https://t.co/23cPkyQoZ0"
+          :url "https://indieweb.social/@sp1ff/1544112708181794821")
+         responses)
+        (let ((to-send
+               (indie-org-required-posses requests responses)))
+          (should (eq 1 (length to-send))) ;; one remaining page :=> requests
+          ;; record the last one
+          (indie-org-record-sent-posse
+           "mp3.html"
+           (indie-org-make-posse-response
+            :sort :reddit
+            :created-at"Tue Jul 05 00:17:32 +0000 2022"
+            :id "1544112708181794823"
+            :text"unwoundstack can now send &amp; receive Webmentions: https://t.co/23cPkyQoZ0"
+            :url "https://reddit.com/r/rust/not_a_real_title.html")
+           responses)
+          (let ((to-send
+                 (indie-org-required-posses requests responses)))
+            (should (eq 0 (length to-send)))
+            ))))))
+
 (provide 'indie-org-tests)
 
 ;;; indie-org-tests.el ends here

@@ -1,23 +1,31 @@
 indie-org News -- history of user-visible changes                -*- outline -*-
 
-* 0.0.4 build
+* indie-org 0.1
 
-** `indie-org-find-posts' broken in prod
+** 0.1.0 build
+
+*** general code tidying
+*** POSSE support
+* indie-org 0.0
+
+** 0.0.4 build
+
+*** `indie-org-find-posts' broken in prod
 
 Fixed a bug in `indie-org-find-posts` that inadvertently included *only* drafts in prod
-** `indie-org-send-webmention' was broken
+*** `indie-org-send-webmention' was broken
 
 Fixed a bug in `indie-org-send-webmention` in which I took the keys in the returned alist to be strings, when they are in fact symbols.
-* 0.0.3 build
+** 0.0.3 build
 
-** Fixed a bug in `indie-org--format-entry-for-h-feed'
+*** Fixed a bug in `indie-org--format-entry-for-h-feed'
 The :updated property was not being handled correctly
-* 0.0.2 build
+** 0.0.2 build
 
-** Fixed a bug in indie-org--format-h-feed-sitemap
+*** Fixed a bug in indie-org--format-h-feed-sitemap
 Missing newline after title.
-** Made indie-org--get-page-key public
+*** Made indie-org--get-page-key public
 Renamed to indie-org-get-page-key
-* 0.0.1 build
+** 0.0.1 build
 
 Initial release.

@@ -2,9 +2,41 @@
 #+DESCRIPTION: Org-export on the Indieweb
 #+AUTHOR: Michael
 #+EMAIL: sp1ff@pobox.com
-#+DATE: <2022-07-01 Fri 13:03>
+#+DATE: <2022-07-09 Sat 09:02>
 #+AUTODATE: t
 
 * Introduction
 
 =indie-org= is an [[https://www.gnu.org/software/emacs/Emacs][Emacs]] [[https://www.gnu.org/software/emacs/manual/html_mono/elisp.html#Packaging-Basics][package]] for getting [[https://indieweb.org/static_site_generator][staticly-generated]] web sites published with [[https://orgmode.org/org.html][Org-mode]]'s [[https://orgmode.org/org.html#HTML-Export][HTML Export]] facility onto the [[https://indieweb.org/][Indieweb]]. This project is currently experimental; this is first code. I may publish it to MELPA at some point, so I'm trying to respect both the [[https://www.gnu.org/software/emacs/manual/html_node/elisp/Coding-Conventions.html#Coding-Conventions][GNU]] and [[https://github.com/melpa/melpa/blob/master/CONTRIBUTING.org][MELPA]] coding conventions.
+
+* Prerequisites
+
+=indie-org= is developed against Org 9.5 and an Emacs built from source. That said, I'm not using any bleeding-edge features; the package should work against any recent Emacs install. If you find any backward incompatibilities, drop me a line.
+
+* Installing
+
+At present =indie-org= is only available as source.
+
+#+BEGIN_SRC bash
+  git clone git@github.com:sp1ff/indie-org.git
+  cd indie-org
+  ./bootstrap
+  ./configure
+  make
+  make check
+  sudo make install
+#+END_SRC
+
+The build process _does_ make an Emacs package, so you can also do:
+
+#+BEGIN_SRC bash
+  # as above...
+  make check
+  make dist
+#+END_SRC
+
+to produce an Emacs package file (=indie-org-0.1.0.tar=) which you can install with =package-install-file= in your Emacs.
+
+* Status & Roadmap
+
+This is experimental, but I'm using it today with my personal [[https://www.unwoundstack.com][site]]. Bugs, feature requests and so on welcome!

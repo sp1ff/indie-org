@@ -1,3 +1,8 @@
+2022-07-09  Michael Herstine  <sp1ff@pobox.com>
+
+	indie-org 0.1.
+	This commit adds support for POSSE.
+
 2022-07-03  Michael Herstine  <sp1ff@pobox.com>
 
 	Bugfix commit. This commit
