@@ -3,7 +3,7 @@
 ;; Copyright (C) 2022 Michael Herstine <sp1ff@pobox.com>
 
 ;; Author: Michael Herstine <sp1ff@pobox.com>
-;; Version: 0.1.0
+;; Version: 0.2.0
 ;; Package-Requires: ((emacs "24"))
 ;; Keywords: hypermedia, outlines, wp
 ;; URL: https://www.unwoundstack.com
@@ -28,7 +28,7 @@
 (require 'ox-rss)
 (require 'request)
 
-(defconst indie-org-version "0.1.0")
+(defconst indie-org-version "0.2.0")
 
 (defgroup indie-org nil
   "Org HTML Export on the Indieweb."
@@ -1429,6 +1429,146 @@ DRAFT & UPDATED keywords."
    "repost"
    :follow #'indie-org-browse-mention
    :export #'indie-org-export-repost))
+
+(defun indie-org--pp-last-published (publication-state)
+  "Pretty-print the last-published information from PUBLICATION-STATE."
+  (message "last-published:")
+  (let ((last-published (plist-get publication-state :last-published)))
+    (while last-published
+      (let ((env (car last-published))
+            (time (cadr last-published)))
+        (message "  %s: %s" env (format-time-string "%Y-%m-%d %H:%M:%S" time))
+        (setq last-published (cddr last-published))))))
+
+(defun indie-org--pp-webmentions-received (publication-state)
+  "Pretty-print the webmentions received in PUBLICATION-STATE."
+  (let* ((webmentions-received
+          (indie-org-get-webmentions-received publication-state))
+         (mentions
+          (plist-get webmentions-received :mentions)))
+    (message "webmentions received:")
+    (let ((last-checked (plist-get webmentions-received :last-checked))
+          (last-id (plist-get webmentions-received :last-id)))
+      (if last-checked
+          (message
+           "  last-checked: %s"
+           (format-time-string
+            "%Y-%m-%d %H:%M:%S"
+            last-checked)))
+      (if last-id
+          (message
+           "  last-id: %d"
+           last-id)))
+    (message "  received:")
+    (maphash
+     (lambda (page-key wms)
+       (when wms
+         (message "    %s received:" page-key)
+         ;; `wms' is a list of `indie-org-receive-wm' instances
+         (while wms
+           (let ((wm (car wms)))
+             (message "      %s: %s"
+                      (format-time-string "%Y-%m-%d %H:%M:%S"
+                                          (indie-org-received-wm-time-received wm))
+                      (indie-org-received-wm-source wm)))
+           (setq wms (cdr wms)))))
+     mentions)))
+
+(defun indie-org--pp-webmentions-made (publication-state)
+  "Pretty-print the webmentions made in PUBLICATION-STATE."
+  (message "webmentions made:")
+  (let ((webmentions-made (plist-get publication-state :webmentions-made)))
+    (while webmentions-made
+      (let ((env (car webmentions-made))
+            (hash (cadr webmentions-made)))
+        (message "  %s:" env)
+        (maphash
+         (lambda (page-key mentions)
+           ;; `mentions' is a hash table: <hash: pub-date :=> (mention...)>
+           (maphash
+            (lambda (pub-date mentions)
+              (when (not (null mentions))
+                (message
+                 "    %s (%s, %d mentions):"
+                 page-key
+                 (format-time-string "%Y-%m-%d %H:%M:%S" pub-date)
+                 (length mentions))
+                (while mentions
+                  (message "      %s" (car mentions))
+                  (setq mentions (cdr mentions)))))
+            mentions))
+         hash))
+      (setq webmentions-made (cddr webmentions-made)))))
+
+(defun indie-org--pp-posse-requests (publication-state)
+  "Pretty-print the POSSE requests in PUBLICATION-STATE."
+  (message "POSSE requests:")
+  (let ((posse-requests (plist-get publication-state :posse-requests)))
+    (while posse-requests
+      (let ((env (car posse-requests))
+            (hash (cadr posse-requests)))
+        (message "    %s:" env)
+        (maphash
+         (lambda (page-key targets)
+           (message "        %s:" page-key)
+           (while targets
+             (message "            %s" (car targets))
+             (setq targets (cdr targets))))
+         hash))
+      (setq posse-requests (cddr posse-requests)))))
+
+(defun indie-org--pp-webmentions-sent (publication-state)
+  "Pretty-print the webmentions sent in PUBLICATION-STATE."
+  (message "webmentions sent:")
+  (let ((webmentions-sent (plist-get publication-state :webmentions-sent)))
+    (while webmentions-sent
+      (let ((env (car webmentions-sent))
+            (hash (cadr webmentions-sent)))
+        (message "  %s:" env)
+        (maphash
+         (lambda (page-key hash)
+           ;; `hash' is <hash: pub-date => (mention...)
+           (when (not (eq 0 (hash-table-count hash)))
+             (message "    %s:" page-key)
+             (maphash
+              (lambda (target mentions)
+                (when (not (null mentions))
+                  (message "      %s" target)
+                  (while mentions
+                    (let ((wm (car mentions)))
+                      (message "        %s: %s"
+                               (format-time-string "%Y-%m-%d %H:%M:%S" (indie-org-sent-wm-time-sent wm))
+                               (indie-org-sent-wm-status wm)))
+                    (setq mentions (cdr mentions)))))
+              hash)))
+         hash))
+      (setq webmentions-sent (cddr webmentions-sent)))))
+
+(defun indie-org--pp-posse-responses (publication-state)
+  "Pretty-print the POSSE responses in PUBLICATION-STATE."
+  (message "POSSE responses:")
+    (let ((posse-responses (plist-get publication-state :posse-responses)))
+      (if posse-responses
+          (maphash
+           (lambda (page-key responses)
+             (message "    %s:" page-key)
+             (while responses
+               (let ((rsp (car responses)))
+                 (message "        %s:" (indie-org-posse-response-sort rsp))
+                 (message "            %s" (indie-org-posse-response-created-at rsp))
+                 (message "            %s" (indie-org-posse-response-id rsp))
+                 (message "            %s" (indie-org-posse-response-url rsp)))
+               (setq responses (cdr responses))))
+           posse-responses))))
+
+(defun indie-org-pp-state (publication-state)
+  "Pretty-print the publication state in PUBLICATION-STATE."
+  (indie-org--pp-last-published publication-state)
+  (indie-org--pp-webmentions-received publication-state)
+  (indie-org--pp-webmentions-made publication-state)
+  (indie-org--pp-posse-requests publication-state)
+  (indie-org--pp-webmentions-sent publication-state)
+  (indie-org--pp-posse-responses publication-state))
 
 (provide 'indie-org)
 ;;; indie-org.el ends here
