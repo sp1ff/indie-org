@@ -1,3 +1,12 @@
+2022-07-17  Michael Herstine  <sp1ff@pobox.com>
+
+	Patch commit:
+	    - fix a bug in `indie-org-check-webmentions` in which a log
+	      message would fail to format if no webmentions have been
+	      made in the past
+	    - added logging messages to `indie-org-send-posse-request`
+	      in the error case
+
 2022-07-16  Michael Herstine  <sp1ff@pobox.com>
 
 	Introduced `indie-org-pp-state`.

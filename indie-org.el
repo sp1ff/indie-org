@@ -3,7 +3,7 @@
 ;; Copyright (C) 2022 Michael Herstine <sp1ff@pobox.com>
 
 ;; Author: Michael Herstine <sp1ff@pobox.com>
-;; Version: 0.2.0
+;; Version: 0.2.1
 ;; Package-Requires: ((emacs "24"))
 ;; Keywords: hypermedia, outlines, wp
 ;; URL: https://www.unwoundstack.com
@@ -28,7 +28,7 @@
 (require 'ox-rss)
 (require 'request)
 
-(defconst indie-org-version "0.2.0")
+(defconst indie-org-version "0.2.1")
 
 (defgroup indie-org nil
   "Org HTML Export on the Indieweb."
@@ -1006,7 +1006,7 @@ mentions)."
                  (setq last-id (max id (or last-id 0)))))
              finally
              (message "Processing %d webmentions...done(last-id %d)."
-                      num-entries last-id))
+                      num-entries (or last-id 0)))
             (setq state (plist-put state :last-id last-id))
             (setq state (plist-put state :last-checked (current-time))))))
     state))
@@ -1195,6 +1195,10 @@ Return an indie-org-posse-response."
                             :text (alist-get 'text data)
                             :url (alist-get 'url data))))
                     ((eq symbol-status 'error)
+                     (message "While sending POSSE request %s :=> %s, got:" source target)
+                     (message "    data: %s" data)
+                     (message "  symbol: %s" symbol-status)
+                     (message "response: %s" error-thrown)
                      (let* ((original (alist-get 'original data)))
                        (if original
                            (setq rsp (indie-org-make-posse-response

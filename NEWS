@@ -2,6 +2,12 @@ indie-org News -- history of user-visible changes                -*- outline -*-
 
 * indie-org 0.2
 
+*** 0.2.1 build
+
+**** fixed a bug in `indie-org-check-webmentions`
+A log message would fail to format if no webmentions have ever been sent.
+**** added additional log messages to `indie-org-send-posse-request`
+Log more information in the error case.
 *** 0.2.0 build
 
 **** introduced `indie-org-pp-state`
