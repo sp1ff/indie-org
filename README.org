@@ -2,7 +2,7 @@
 #+DESCRIPTION: Org-export on the Indieweb
 #+AUTHOR: Michael
 #+EMAIL: sp1ff@pobox.com
-#+DATE: <2022-07-17 Sun 16:56>
+#+DATE: <2022-09-03 Sat 09:22>
 #+AUTODATE: t
 
 * Introduction
@@ -11,7 +11,7 @@
 
 * Prerequisites
 
-=indie-org= is developed against Org 9.5 and an Emacs built from source. That said, I'm not using any bleeding-edge features; the package should work against any recent Emacs install. If you find any backward incompatibilities, drop me a line.
+=indie-org= requires Emacs 26.1 and Org-mode 9.5.3.
 
 * Installing
 
@@ -35,7 +35,7 @@ The build process _does_ make an Emacs package, so you can also do:
   make dist
 #+END_SRC
 
-to produce an Emacs package file (=indie-org-0.2.1.tar=) which you can install with =package-install-file= in your Emacs.
+to produce an Emacs package file (=indie-org-0.2.2.tar=) which you can install with =package-install-file= in your Emacs.
 
 * Status & Roadmap
 

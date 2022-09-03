@@ -2,6 +2,11 @@ indie-org News -- history of user-visible changes                -*- outline -*-
 
 * indie-org 0.2
 
+*** 0.2.2 build
+
+**** fixed issue #1
+
+Webmentions were assumed to have a "content" field; naturally, the first (non-synthetic) webmentino I received did not.
 *** 0.2.1 build
 
 **** fixed a bug in `indie-org-check-webmentions`

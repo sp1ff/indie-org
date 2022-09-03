@@ -3,8 +3,8 @@
 ;; Copyright (C) 2022 Michael Herstine <sp1ff@pobox.com>
 
 ;; Author: Michael Herstine <sp1ff@pobox.com>
-;; Version: 0.2.1
-;; Package-Requires: ((emacs "24"))
+;; Version: 0.2.2
+;; Package-Requires: ((emacs "26.1"))
 ;; Keywords: hypermedia, outlines, wp
 ;; URL: https://www.unwoundstack.com
 
@@ -23,12 +23,16 @@
 
 ;;; Commentary:
 
+;; `indie-org' is an Emacs package for getting statically-generated
+;; web sites published with Org-mode's HTML Export facility onto the
+;; Indieweb.
+
 ;;; Code:
 (require 'ox)
 (require 'ox-rss)
 (require 'request)
 
-(defconst indie-org-version "0.2.1")
+(defconst indie-org-version "0.2.2")
 
 (defgroup indie-org nil
   "Org HTML Export on the Indieweb."
@@ -358,14 +362,13 @@ keyword."
                ;; Disable the default ctor (the name violates Emacs
                ;; package naming conventions)
                (:constructor nil)
-               ;; LATER(sp1ff): I'm staying loose on the validation
-               ;; until I beter understand the requirements on this
-               ;; type
+               ;; I'm staying loose on the validation until I beter
+               ;; understand the requirements on this type
                (:constructor
                 indie-org-make-received-wm
                 (&key id sort time-received source target author
                       content private)))
-  "Received webmention."
+  "Received webmention. CONTENT may be nil."
   id sort time-received source target author content private)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -855,7 +858,7 @@ and whose cdr is a list of POSSE symbols."
     results))
 
 (defun indie-org-record-sent-posse (page-key response posse-responses)
-  "Record a POSSE RESPOSNE to PAGE-KEY.
+  "Record a RESPONSE to PAGE-KEY.
 POSSE-RESPONSES shall be a hash of page-key to lists of
 previously received respones."
   (let ((curr (gethash page-key posse-responses)))
@@ -972,9 +975,10 @@ mentions)."
                       :url (gethash "url" author-hash)))
                     (content-hash (gethash "content" entry))
                     (content
-                     (indie-org-make-received-wm-content
-                      :html (gethash "html" content-hash)
-                      :text (gethash "text" content-hash)))
+                     (if content-hash
+                         (indie-org-make-received-wm-content
+                          :html (gethash "html" content-hash)
+                          :text (gethash "text" content-hash))))
                     (id (gethash "wm-id" entry))
                     (target (gethash "wm-target" entry))
                     (wm
@@ -1299,6 +1303,8 @@ Shamelessly copied from `ox-rss.el'"
 
 (defun indie-org-find-posts (project-dir exclude-drafts &rest kwargs)
   "Determine which posts in PROJECT-DIR are to be included.
+Set EXCLUDE-DRAFTS to t to exclude drafts.
+KWARGS recognizes :exclude; a list of files to be excluded.
 
 `indie-org' introduces the export option DRAFT which can be used
 to exclude posts from publication.  Use this method to assemble a
@@ -1331,6 +1337,9 @@ to be excluded-- this is handy for sitemaps, e.g."
 
 (defun indie-org-enable-rss-2.0-feed (project sitemap-filename feed-title feed-description)
   "Add an RSS 2.0 feed to an Org Export PROJECT.
+SITEMAP-FILENAME will be used as the Org Export :sitemap-filename.
+FEED-TITLE will be the RSS feed title.
+FEED-DESCRIPTION will the RSS feed description.
 
 This function will return a list suitable for use as an Org
 Export project that will produce an RSS 2.0 feed.  The caller is
@@ -1353,6 +1362,10 @@ the sitemap feature to setup an RSS 2.0 feed for the posts in
 
 (defun indie-org-enable-full-h-feed (project sitemap-filename feed-title feed-description backend)
   "Add a full h-feed to an Org Export PROJECT.
+SITEMAP-FILENAME will be used as the Org export property :sitemap-filename.
+FEED-TITLE will be used as the h-feed title.
+FEED-DESCRIPTION will be used as the h-feed description.
+BACKEND is the Org export backend to use.
 
 This function will return a list suitable for use as an Org
 Export project that will produce an h-feed.  The caller is
