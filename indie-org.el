@@ -3,7 +3,7 @@
 ;; Copyright (C) 2022 Michael Herstine <sp1ff@pobox.com>
 
 ;; Author: Michael Herstine <sp1ff@pobox.com>
-;; Version: 0.2.2
+;; Version: 0.2.3
 ;; Package-Requires: ((emacs "26.1"))
 ;; Keywords: hypermedia, outlines, wp
 ;; URL: https://www.unwoundstack.com
@@ -32,7 +32,7 @@
 (require 'ox-rss)
 (require 'request)
 
-(defconst indie-org-version "0.2.2")
+(defconst indie-org-version "0.2.3")
 
 (defgroup indie-org nil
   "Org HTML Export on the Indieweb."
@@ -1151,19 +1151,19 @@ is the target.
 TOKEN is the telegraph.io API token."
   (let (rsp)
     (request "https://telegraph.p3k.io/webmention"
-      :type "POST"
-      :sync t
-      :data (list (cons "source" (car wm))
-                  (cons "target" (cdr wm))
-                  (cons "token" token))
-      :parser #'json-read
-      :error (cl-function
-              (lambda (&key error-thrown &allow-other-keys)
-                (error "While sending webmention %s :=> %s, got %s"
-                       (car wm) (cdr wm) rsp)))
-      :success (cl-function
-	              (lambda (&key data &allow-other-keys)
-	                (setq rsp data))))
+        :type "POST"
+        :sync t
+        :data (list (cons "source" (car wm))
+                    (cons "target" (cdr wm))
+                    (cons "token" token))
+        :parser #'json-read
+        :error (cl-function
+                (lambda (&key data error-thrown &allow-other-keys)
+                  (error "While sending webmention %s :=> %s, got %s (%S)"
+                         (car wm) (cdr wm) error-thrown data)))
+        :success (cl-function
+	                (lambda (&key data &allow-other-keys)
+	                  (setq rsp data))))
     ;; `rsp' should be an alist with properties 'status and 'location
     (message "%s :=> %s (%s)." (car wm) (cdr wm) rsp)
     (alist-get 'location rsp)))

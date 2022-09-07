@@ -164,6 +164,35 @@
     (should (plist-get state :last-checked))
     (should (eq 1499344 (plist-get state :last-id)))))
 
+(cl-defun mock-request-issue-2 (_url &rest settings
+                                    &key
+                                    (_params nil)
+                                    (_data nil)
+                                    (_headers nil)
+                                    (_encoding 'utf-8)
+                                    (_error nil)
+                                    (_sync nil)
+                                    (_response (make-request-response))
+                                    &allow-other-keys)
+  (let ((err (plist-get settings :error))
+        (rsp (json-parse-string "{\"error\":\"not_supported\",\"error_description\":\"The target domain is known to not accept webmentions.\"}")))
+    (funcall err :data rsp :error-thrown '(error . "http 400")))
+  nil)
+
+(ert-deftest indie-org-test-check-issue-2 ()
+  "Test regressions for issue #2."
+  (let ((state
+         (plist-get
+          (indie-org-make-publication-state)
+          :webmentions-received)))
+    (advice-add 'request :before-while #'mock-request-issue-2)
+    (let ((rsp (should-error
+                (indie-org-send-webmention '("www.unwoundstack.com" . "https://github.com") "token")
+                :type 'error))) 
+      ;; Should probably use `unwind-protect' here, but I'm afraid it will
+      ;; interfere with ert.
+      (advice-remove 'request #'mock-request-issue-2))))
+
 (provide 'indie-org-tests)
 
 ;;; indie-org-tests.el ends here
