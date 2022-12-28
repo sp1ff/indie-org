@@ -3,7 +3,7 @@
 ;; Copyright (C) 2022 Michael Herstine <sp1ff@pobox.com>
 
 ;; Author: Michael Herstine <sp1ff@pobox.com>
-;; Version: 0.2.3
+;; Version: 0.2.4
 ;; Package-Requires: ((emacs "26.1"))
 ;; Keywords: hypermedia, outlines, wp
 ;; URL: https://www.unwoundstack.com
@@ -32,7 +32,7 @@
 (require 'ox-rss)
 (require 'request)
 
-(defconst indie-org-version "0.2.3")
+(defconst indie-org-version "0.2.4")
 
 (defgroup indie-org nil
   "Org HTML Export on the Indieweb."
@@ -78,6 +78,7 @@ is the current project."
                      "%Y-%m-%d"
                      (org-publish-find-date entry project))))
           (with-temp-buffer
+            (org-mode)
             (insert (format "* [[file:%s][%s]]\n" entry title))
             (org-set-property "RSS_PERMALINK" link)
             (org-set-property "RSS_TITLE" title)
@@ -150,6 +151,7 @@ properties to each item that I can use when I publish to HTML."
                       "%Y-%m-%d %H:%M"
                       (org-time-string-to-time (org-element-interpret-data val)))))))
           (with-temp-buffer
+            (org-mode)
             (insert (format "* [[file:%s][%s]]\n" entry title))
             (org-set-property "U_URL" link)
             (org-set-property "P_NAME" title)

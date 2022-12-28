@@ -1,3 +1,13 @@
+2022-12-28  Michael Herstine  <sp1ff@pobox.com>
+
+	Setting org-mode in the temp buffers for h-feeds & rss feeds
+	Starting with Org mode 9.6, the logic for creating the sitemaps
+	used with h-feeds & RSS feeds breaks. This commit invokes
+	`(org-mode)` in the temp buffers used in the implementation
+	thereof.
+
+	Closes issue #3.
+
 2022-09-06  Michael Herstine  <sp1ff@pobox.com>
 
 	Fix issue #2

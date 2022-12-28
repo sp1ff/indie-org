@@ -1,5 +1,5 @@
 AC_PREREQ([2.71])
-AC_INIT([indie-org], [0.2.3], [sp1ff@pobox.com], [indie-org], [https://github.com/sp1ff/indie-org])
+AC_INIT([indie-org], [0.2.4], [sp1ff@pobox.com], [indie-org], [https://github.com/sp1ff/indie-org])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_SRCDIR([./indie-org.el])
 
