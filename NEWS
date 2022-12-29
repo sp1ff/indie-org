@@ -1,24 +1,29 @@
 indie-org News -- history of user-visible changes                -*- outline -*-
 
+* indie-org 0.3
+
+** 0.3.0 build
+
+Completely re-written & re-factored-- a seriously breaking change!
 * indie-org 0.2
 
-*** 0.2.3 build
+** 0.2.3 build
 
 **** fixed issue #2
 
 `indie-org-send-webmention` on receipt of an error response mistakenly used the (local) `rsp` variable rather than the actual response body.
-*** 0.2.2 build
+** 0.2.2 build
 
 **** fixed issue #1
 
 Webmentions were assumed to have a "content" field; naturally, the first (non-synthetic) webmentino I received did not.
-*** 0.2.1 build
+** 0.2.1 build
 
 **** fixed a bug in `indie-org-check-webmentions`
 A log message would fail to format if no webmentions have ever been sent.
 **** added additional log messages to `indie-org-send-posse-request`
 Log more information in the error case.
-*** 0.2.0 build
+** 0.2.0 build
 
 **** introduced `indie-org-pp-state`
 

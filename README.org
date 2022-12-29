@@ -2,20 +2,21 @@
 #+DESCRIPTION: Org-export on the Indieweb
 #+AUTHOR: Michael
 #+EMAIL: sp1ff@pobox.com
-#+DATE: <2022-09-06 Tue 17:18>
+#+DATE: <2023-02-19 Sun 16:31>
 #+AUTODATE: t
 
 * Introduction
 
-=indie-org= is an [[https://www.gnu.org/software/emacs/Emacs][Emacs]] [[https://www.gnu.org/software/emacs/manual/html_mono/elisp.html#Packaging-Basics][package]] for getting [[https://indieweb.org/static_site_generator][staticly-generated]] web sites published with [[https://orgmode.org/org.html][Org-mode]]'s [[https://orgmode.org/org.html#HTML-Export][HTML Export]] facility onto the [[https://indieweb.org/][Indieweb]]. This project is currently experimental; this is first code. I may publish it to MELPA at some point, so I'm trying to respect both the [[https://www.gnu.org/software/emacs/manual/html_node/elisp/Coding-Conventions.html#Coding-Conventions][GNU]] and [[https://github.com/melpa/melpa/blob/master/CONTRIBUTING.org][MELPA]] coding conventions.
+[[https://github.com/sp1ff/indie-org][indie-org]] is an [[https://www.gnu.org/software/emacs/Emacs][Emacs]] [[https://www.gnu.org/software/emacs/manual/html_mono/elisp.html#Packaging-Basics][package]] for getting [[https://indieweb.org/static_site_generator][staticly-generated]] web sites published with [[https://orgmode.org/org.html][Org-mode]]'s [[https://orgmode.org/org.html#HTML-Export][HTML Export]] facility onto the [[https://indieweb.org/][Indieweb]]. The project is nascent, but I am running my sites on it. I may publish it to MELPA at some point, so I'm trying to respect both the [[https://www.gnu.org/software/emacs/manual/html_node/elisp/Coding-Conventions.html#Coding-Conventions][GNU]] and [[https://github.com/melpa/melpa/blob/master/CONTRIBUTING.org][MELPA]] coding conventions.
+* License
 
+This code is released under the [[https://www.gnu.org/licenses/gpl-3.0.en.html][GPL version 3]].
 * Prerequisites
 
-=indie-org= requires Emacs 26.1 and Org-mode 9.5.3.
+[[https://github.com/sp1ff/indie-org][indie-org]] requires Emacs 26.1 and Org-mode 9.5.3.
+* Installation
 
-* Installing
-
-At present =indie-org= is only available as source.
+At present [[https://github.com/sp1ff/indie-org][indie-org]] is only available in source form:
 
 #+BEGIN_SRC bash
   git clone git@github.com:sp1ff/indie-org.git
@@ -35,8 +36,11 @@ The build process _does_ make an Emacs package, so you can also do:
   make dist
 #+END_SRC
 
-to produce an Emacs package file (=indie-org-0.2.3.tar=) which you can install with =package-install-file= in your Emacs.
-
+to produce an Emacs package file (=indie-org-0.3.0.tar=) which you can install with =package-install-file= in your Emacs.
 * Status & Roadmap
 
-This is experimental, but I'm using it today with my personal [[https://www.unwoundstack.com][site]]. Bugs, feature requests and so on welcome!
+It's early days, and I've tried to indicate that with the version number (0.x). In order to use it successfully, you're going to need to be familiar with the [[https://orgmode.org/org.html#Exporting][Org Export]] facility and comfortable with [[https://www.gnu.org/software/emacs/manual/html_mono/elisp.html][Emacs Lisp]]. That said, it's not just an experiment: I'm using it today with my personal [[https://www.unwoundstack.com][site]].
+
+The code base grew organically (one might say like a weed) in the first few releases, but the 0.3 series is a significant re-write in view of the lessons learned during the first iteration.
+
+I gave a [[https://www.youtube.com/watch?v=48RoqMbhftg&list=PLomc4HLgvuCUIwab7EynU78rerDXfFyR_&index=57&t=2s][talk]] on one small part of this at [[https://emacsconf.org/2022/][EmacsConf]]. Bugs, feature requests and so on welcome!

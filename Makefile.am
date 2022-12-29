@@ -1,7 +1,13 @@
-dist_lisp_LISP = indie-org.el indie-org-pkg.el
+dist_lisp_LISP = indie-org-page-key.el    \
+		 indie-org-webmentions.el \
+		 indie-org-posse.el       \
+		 indie-org-state.el       \
+		 indie-org-rss.el         \
+		 indie-org.el             \
+		 indie-org-pkg.el
 EXTRA_DIST = README.org
 CLEANFILES = .pkg-tmp/ indie-org-$(PACKAGE_VERSION).tar
-SUBDIRS = contrib test
+SUBDIRS = contrib doc test
 AM_ELCFLAGS = -L contrib
 
 package: indie-org-$(PACKAGE_VERSION).tar $(srcdir)/README.org
