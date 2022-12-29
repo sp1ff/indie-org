@@ -1,3 +1,17 @@
+2023-02-19  Michael Herstine  <sp1ff@pobox.com>
+
+	First commit of the indie-org re-write.
+	This commit:
+
+	    - re-writes webmentions from scratch
+	    - re-writes POSSE from scratch
+	    - re-factors publication state out into its own package
+	    - gives h-feed & rss their own packages
+	    - moves publication-time stuff into its own package
+
+	The code is still littered with TODOs, but it has a test suite
+	and I'm now running my personal sites on this branch.
+
 2022-12-28  Michael Herstine  <sp1ff@pobox.com>
 
 	Setting org-mode in the temp buffers for h-feeds & rss feeds

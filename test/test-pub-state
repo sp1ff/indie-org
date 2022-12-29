@@ -1,3 +1,0 @@
-#!/bin/bash
-EMACS=${EMACS:-emacs}
-${EMACS} -batch -L ${srcdir}/.. -L ${srcdir}/../contrib -l ${srcdir}/test-pub-state.el --eval '(let ((ert-batch-print-length nil) (ert-batch-print-level nil) (ert-batch-backtrace-line-length nil)) (ert-run-tests-batch-and-exit "^test"))'

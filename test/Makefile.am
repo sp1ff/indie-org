@@ -1,10 +1,18 @@
 AM_ELCFLAGS = -L ${srcdir}/.. -L ${srcdir}/../contrib
 
-TESTS = indie-org-tests test-pub-state
+TESTS = indie-org-webmentions-tests \
+        indie-org-posse-tests       \
+	indie-org-pub-tests         \
+	test-state                  \
+	indie-org-tests
 
-dist_noinst_LISP = indie-org-tests.el test-pub-state.el
+dist_noinst_LISP = indie-org-webmentions-tests.el \
+		   indie-org-posse-tests.el       \
+		   indie-org-pub-tests.el         \
+		   test-state.el                  \
+		   indie-org-tests.el
 
-EXTRA_DIST = $(TESTS)
+EXTRA_DIST = $(TESTS) test-state.1
 
 AM_TESTS_ENVIRONMENT =   \
 	srcdir=$(srcdir) \
