@@ -1,5 +1,9 @@
 2023-02-19  Michael Herstine  <sp1ff@pobox.com>
 
+	Adding several files to the source tarballs that were missing in the initial release
+
+2023-02-19  Michael Herstine  <sp1ff@pobox.com>
+
 	First commit of the indie-org re-write.
 	This commit:
 

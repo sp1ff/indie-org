@@ -1,8 +1,10 @@
 dist_lisp_LISP = indie-org-page-key.el    \
 		 indie-org-webmentions.el \
 		 indie-org-posse.el       \
-		 indie-org-state.el       \
 		 indie-org-rss.el         \
+		 indie-org-h-feed.el      \
+		 indie-org-state.el       \
+		 indie-org-pub.el         \
 		 indie-org.el             \
 		 indie-org-pkg.el
 EXTRA_DIST = README.org
