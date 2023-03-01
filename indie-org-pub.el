@@ -22,6 +22,7 @@
 ;;; Code
 (require 'indie-org-page-key)
 (require 'indie-org-webmentions)
+(require 'indie-org-posse)
 
 (require 'ox-publish)
 

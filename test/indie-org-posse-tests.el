@@ -108,6 +108,21 @@
     (should (equal "Tue Jul 05 00:15:32 +0000 2022" (indie-org-posse-response-created-at rsp)))
     (should (equal "1544112708181794821" (indie-org-posse-response-id rsp)))))
 
+(ert-deftest indie-org-posse-tests-parse-tests ()
+  "Test `indie-org-posse-parse-link'."
+  (should
+   (equal
+    (indie-org-posse-parse-link "https://twitter.com/unwoundstack/status/1544112708181794821")
+    '("unwoundstack" "1544112708181794821" "tweet")))
+  (should
+   (equal
+    (indie-org-posse-parse-link "https://indieweb.social/@sp1ff/108946369102008703")
+    '("@sp1ff" "108946369102008703" "toot"))))
+
+(ert-deftest indie-org-posse-tests-negative-parse-tests ()
+  "Negative tests for `indie-org-posse-parse-link'."
+  :expected-result :failed
+  (indie-org-posse-parse-link "https://cloudflare.net"))
 
 (provide 'indie-org-posse-tests)
 ;;; indie-org-posse-tests.el ends here

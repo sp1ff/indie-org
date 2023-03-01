@@ -21,7 +21,10 @@
 
 ;;; Code:
 (require 'indie-org-page-key)
+(require 'indie-org-serde)
 (require 'request)
+(require 'ol)
+(require 'ox)
 (require 'cl-lib)
 
 
@@ -43,6 +46,7 @@ Return the resulting list."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;          making mention of other sites (i.e. sending Webmentions)         ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 
 (cl-defstruct (indie-org-webmentions-targets
                (:constructor nil)
@@ -84,6 +88,29 @@ Where:
               (setq targets (cdr targets)))))
       (setq keys (cdr keys)))))
 
+(defun indie-org-webmentions-targets-to-plist (targets)
+    "Serialize TARGETS to a plist."
+    (unless (indie-org-webmentions-targets-p targets)
+      (signal 'wrong-type-argument (list #'indie-org-webmentions-targets-p targets)))
+    (list
+     :hash
+     (indie-org-serde-hash-to-plist
+      (indie-org-webmentions-targets-hash targets))))
+
+(defun indie-org-webmentions-targets-from-plist (plist)
+  "Deserialize PLIST to an `indie-org-webmentions-targets'."
+  ;; (let ((hash (make-hash-table :test 'equal)))
+  ;;   (while plist
+  ;;     (let ((key (car plist))
+  ;;           (value (cadr plist)))
+  ;;       (puthash key value hash))
+  ;;     (setq plist (cddr plist)))
+  ;;   (indie-org-webmentions-make-pub-targets :hash hash))
+  (indie-org-webmentions-make-pub-targets
+   :hash
+   (indie-org-serde-plist-to-hash
+    (plist-get plist :hash))))
+
 (cl-defstruct (indie-org-webmentions-made
                (:constructor nil)
                (:constructor indie-org-webmentions-make-made))
@@ -122,10 +149,27 @@ Where:
   ;; `hash' is a hash table from page-key :=> indie-org-webmentions-targets
   (hash (make-hash-table :test 'equal) :type hash-table))
 
+(defun indie-org-webmentions-made-to-plist (made)
+    "Serialize MADE to a property list."
+    (list
+     :hash
+     (indie-org-serde-hash-to-plist
+      (indie-org-webmentions-made-hash made)
+      :serializer #'indie-org-webmentions-targets-to-plist)))
+
+(defun indie-org-webmentions-made-from-plist (plist)
+    "Deserialize PLIST to an `indie-org-webmentions-made' instance."
+    (indie-org-webmentions-make-made
+     :hash
+     (indie-org-serde-plist-to-hash
+      (plist-get plist :hash)
+      :test 'equal
+      :deserializer #'indie-org-webmentions-targets-from-plist)))
+
 (defun indie-org-webmentions-pp-made (made &optional indent)
   "Pretty-print webmentions-made MADE at indent level INDENT."
   (unless (indie-org-webmentions-made-p made)
-    (signal 'wrong-type-argument (list #'indie-org-webmentions-madep made)))
+    (signal 'wrong-type-argument (list #'indie-org-webmentions-made-p made)))
   (let* ((indent (or indent 0))
          (indent1 (make-string (* indent 4) ?\s))
          (indent2 (make-string (+ 4 (* indent 4)) ?\s))
@@ -219,9 +263,34 @@ mention, reply, and so forth) as a keyword."
      indent2 (indie-org-webmentions-sent-wm-status sent-wm)
      indent2 (indie-org-webmentions-sent-wm-kind sent-wm))))
 
+(defun indie-org-webmentions-sent-wm-to-plist (sent)
+  "Serialize SENT to a property list."
+  (list
+   :source    (indie-org-webmentions-sent-wm-source    sent)
+   :target    (indie-org-webmentions-sent-wm-target    sent)
+   :time-sent (indie-org-webmentions-sent-wm-time-sent sent)
+   :status    (indie-org-webmentions-sent-wm-status    sent)
+   :kind      (indie-org-webmentions-sent-wm-target    sent)))
+
+(defun indie-org-webmentions-sent-wms-to-plist (lyzt)
+    "Serializes LYZT to a property list."
+    (mapcar #'indie-org-webmentions-sent-wm-to-plist lyzt))
+
+(defun indie-org-webmentions-sent-wm-from-plist (plist)
+  "Deserialize PLIST to an `indie-org-webmentions-sent-wm'."
+  (indie-org-webmentions-make-sent-wm
+   :source    (plist-get plist :source)
+   :target    (plist-get plist :target)
+   :time-sent (plist-get plist :time-sent)
+   :status    (plist-get plist :status)))
+
+(defun indie-org-webmentions-sent-wms-from-plist (lyzt)
+  "Deserialize LYZT to a list of property lists."
+  (mapcar #'indie-org-webmentions-sent-wm-from-plist lyzt))
+
 (cl-defstruct (indie-org-webmentions-send-targets
                (:constructor nil)
-               (:constructor indie-org-webmentions--make-wm-targets))
+               (:constructor indie-org-webmentions--make-send-targets))
   "All sent Webmentions for a particular target (on a given page).
 
 See also `indie-org-webmentions-sent'.  This struct captures the
@@ -235,7 +304,7 @@ Where:
     target post
 
     wm-sent: is an `indie-org-webmentions-sent-wm' instance"
-  ;; `hash` is a hash table mapping wm target to to `indie-org-webmentions-sent-wm'
+  ;; `hash` is a hash table mapping wm target to to (`indie-org-webmentions-sent-wm'...)
   (hash (make-hash-table :test 'equal) :type hash-table))
 
 (defun indie-org-webmentions-pp-send-targets (targets &optional indent)
@@ -256,6 +325,25 @@ Where:
             (setq sent-wms (cdr sent-wms)))))
       (setq targets (cdr targets)))))
 
+(defun indie-org-webmentions-send-targets-to-plist (targets)
+  "Serialize TARGETS to a propertly list."
+  (unless (indie-org-webmentions-send-targets-p targets)
+    (signal 'wrong-type-argument (list #'indie-org-webmentions-send-targets-p targets)))
+  (list
+   :hash
+   (indie-org-serde-hash-to-plist
+    (indie-org-webmentions-send-targets-hash targets)
+    :serializer #'indie-org-webmentions-sent-wms-to-plist)))
+
+(defun indie-org-webmentions-send-targets-from-plist (plist)
+  "Deserialize PLIST to an `indie-org-webmentions-send-targets'."
+  (indie-org-webmentions--make-send-targets
+   :hash
+   (indie-org-serde-plist-to-hash
+    (plist-get plist :hash)
+    :test #'equal
+    :deserializer #'indie-org-webmentions-sent-wms-from-plist)))
+
 (defun indie-org-webmentions-update-send-targets (targets target sent-wm)
   "Update an `indie-org-webmentions-send-targets'.
 TARGETS shall be an `indie-org-webmentions-send-targets' instance.
@@ -270,8 +358,7 @@ the sent Webmention."
     (puthash
      target
      (if curr-list (cons sent-wm curr-list) (list sent-wm))
-     hash)
-    nil))
+     hash)))
 
 (cl-defstruct (indie-org-webmentions-sent
                (:constructor nil)
@@ -303,6 +390,25 @@ for staging, e.g."
   ;; `hash` is a hash table mapping page key to to `indie-org-webmentions-send-targets'
   (hash (make-hash-table :test 'equal) :type hash-table))
 
+(defun indie-org-webmentions-sent-to-plist (sent)
+  "Serialize SENT to a property list."
+  (list
+   :hash
+   (indie-org-serde-hash-to-plist
+    (indie-org-webmentions-sent-hash sent)
+    :serializer #'indie-org-webmentions-send-targets-to-plist)))
+
+(defun indie-org-webmentions-sent-from-plist (plist)
+  "Deserialize PLIST to an `indie-org-webmentions-send-targets'."
+  (unless (listp plist)
+    (signal 'wrong-type-argument (list #'listp plist)))
+  (indie-org-webmentions-make-sent
+   :hash
+   (indie-org-serde-plist-to-hash
+    (plist-get plist :hash)
+    :test #'equal
+    :deserializer #'indie-org-webmentions-send-targets-from-plist)))
+
 (defun indie-org-webmentions-pp-sent (sent &optional indent)
   "Pretty-print sent webmentions SENT at indent INDENT."
   (unless (indie-org-webmentions-sent-p sent)
@@ -331,7 +437,7 @@ status of the sent Webmention."
     (signal 'wrong-type-argument (list 'indie-org-webmentions-sent-p sent)))
   (let* ((curr-hash (indie-org-webmentions-sent-hash sent))
          (curr-targets (or (gethash page curr-hash)
-                           (indie-org-webmentions--make-wm-targets))))
+                           (indie-org-webmentions--make-send-targets))))
     (indie-org-webmentions-update-send-targets curr-targets target sent-wm)
     (puthash page curr-targets curr-hash)
     nil))
@@ -379,6 +485,8 @@ the cdr the target."
        ;; (URL...).  We seek the two most recent publications.  We have a hash
        ;; table mapping publication-timestamp to mentions.  Let's turn that
        ;; into a list...
+       (unless (indie-org-webmentions-targets-p publications-table)
+         (signal 'wrong-type-argument (list #'indie-org-webmentions-targets-p publications-table)))
        (let ((publications))
          (maphash
           (lambda (pub-time mentions-made)
@@ -422,11 +530,6 @@ the cdr the target."
              ;; need to ensure have been, or will be, hit.
              (while recent-mentions
                (if sent-mentions
-                   ;; TODO(sp1ff): what is this 👇?
-
-                   ;; (let ((last-sent (gethash (car recent-mentions) sent-mentions)))
-                   ;;   (unless (and last-sent (< (float-time pub-time) (float-time last-sent)))
-                   ;;     (setq mentions-to-send (cons (cons page-key (car recent-mentions)) mentions-to-send))))
                    (let* ((target (car recent-mentions))
                           (wms
                            (sort
@@ -468,7 +571,6 @@ TOKEN is the telegraph.p3.io API token to be used for authentication."
 	              (lambda (&key data &allow-other-keys)
 	                (setq rsp data))))
     ;; `rsp' should be an alist with properties 'status and 'location
-    ;; TODO(sp1ff): not sure I like a printf in a library method... do we need a logging facility?
     (message "%s :=> %s (%s)." (car wm) (cdr wm) rsp)
     (alist-get 'location rsp)))
 
@@ -499,7 +601,7 @@ Returns nil."
 
 ;; <https://github.com/aaronpk/webmention.io/blob/45a06629e59d56efdba1ce39936e61b81fc92d97/helpers/formats.rb#L169>
 (defun indie-org-webmentions--string-to-wm-sort (text)
-  "Convert the 'wm-property' string TEXT returned from webmention.io to keyword."
+  "Convert the `wm-property' string TEXT returned from webmention.io to keyword."
   (cond
    ((string= text "mention-of") :mention)
    ((string= text "in-reply-to") :reply)
@@ -528,6 +630,22 @@ Returns nil."
   "Author of a received webmention."
   name photo type url)
 
+(defun indie-org-webmentions-received-wm-author-to-plist (author)
+  "Serialize AUTHOR to a property list."
+  (list
+   :name  (indie-org-webmentions--received-wm-author-name  author)
+   :photo (indie-org-webmentions--received-wm-author-photo author)
+   :type  (indie-org-webmentions--received-wm-author-type  author)
+   :url   (indie-org-webmentions--received-wm-author-url   author)))
+
+(defun indie-org-webmentions-received-wm-author-from-plist (plist)
+  "Deserialize PLIST to an `indie-org-webmentions--received-wm-auhtor' instance."
+  (indie-org-webmentions--make-received-wm-author
+   :name  (plist-get plist :name)
+   :photo (plist-get plist :photo)
+   :type  (plist-get plist :type)
+   :url   (plist-get plist :url)))
+
 (cl-defstruct (indie-org-webmentions--received-wm-content
                ;; Disable the default ctor (the name violates Emacs
                ;; package naming conventions)
@@ -537,6 +655,18 @@ Returns nil."
                 (&key html text)))
   "Received webmention content."
   html text)
+
+(defun indie-org-webmentions-received-wm-content-to-plist (content)
+  "Serialize CONTENT to a property list."
+  (list
+   :html (indie-org-webmentions--received-wm-content-html content)
+   :text (indie-org-webmentions--received-wm-content-text content)))
+
+(defun indie-org-webmentions-received-wm-content-from-plist (plist)
+  "Deserialize PLIST to an `indie-org-webmentions--received-wm-content' instance."
+  (indie-org-webmentions--make-received-wm-content
+   :html (plist-get plist :html)
+   :text (plist-get plist :text)))
 
 (cl-defstruct (indie-org-webmentions-received-wm
                ;; Disable the default ctor (the name violates Emacs
@@ -549,7 +679,6 @@ Returns nil."
                 (&key id sort time-received source target author
                       content private)))
   "Received webmention. CONTENT may be nil."
-  ;; TODO(sp1ff): firm these 👇 up (type, default, docstring...)
   id sort time-received source target author content private)
 
 (defun indie-org-webmentions-pp-received-wm (wm &optional indent)
@@ -568,11 +697,43 @@ Returns nil."
      indent2 (indie-org-webmentions-received-wm-sort wm)
      indent2
      (format-time-string "%Y-%m-%d %H:%M:%S" (indie-org-webmentions-received-wm-time-received wm))
-     ;; TODO(sp1ff): Needs pretty-printer 👇
      indent2 (indie-org-webmentions-received-wm-author wm)
-     ;; TODO(sp1ff): Needs pretty-printer 👇
      indent2 (indie-org-webmentions-received-wm-content wm)
      indent2 (indie-org-webmentions-received-wm-private wm))))
+
+(defun indie-org-webmentions-received-wm-to-plist (received-wm)
+  "Serialize RECEIVED-WM to a property list."
+  (list
+   :id            (indie-org-webmentions-received-wm-id            received-wm)
+   :sort          (indie-org-webmentions-received-wm-sort          received-wm)
+   :time-received (indie-org-webmentions-received-wm-time-received received-wm)
+   :source        (indie-org-webmentions-received-wm-source        received-wm)
+   :target        (indie-org-webmentions-received-wm-target        received-wm)
+   :author        (indie-org-webmentions-received-wm-author-to-plist (indie-org-webmentions-received-wm-author received-wm))
+   :content       (indie-org-webmentions-received-wm-content-to-plist (indie-org-webmentions-received-wm-content received-wm))
+   :private       (indie-org-webmentions-received-wm-private received-wm)))
+
+(defun indie-org-webmentions-received-wm-from-plist (plist)
+  "Deserialize PLIST to an `indie-org-webmentions-received-wm'."
+  (indie-org-webmentions-make-received-wm
+   :id            (plist-get plist :id)
+   :sort          (plist-get plist :sort)
+   :time-received (plist-get plist :time-received)
+   :source        (plist-get plist :source)
+   :target        (plist-get plist :target)
+   :author        (indie-org-webmentions-received-wm-author-from-plist (plist-get plist :author))
+   :content       (indie-org-webmentions-received-wm-content-from-plist (plist-get plist :content))
+   :private       (plist-get plist :private)))
+
+(defun indie-org-webmentions-received-wm-list-to-plist (lzt)
+  "Serialize LZT to a list of property lists.
+
+Each property list will represent an `indie-org-webmentions-received-wm'."
+  (mapcar #'indie-org-webmentions-received-wm-to-plist lzt))
+
+(defun indie-org-webmentions-received-wm-list-from-plist (lzt)
+    "Deserialize LZT to a list of `indie-org-webmentions-received-wm'."
+  (mapcar #'indie-org-webmentions-received-wm-from-plist lzt))
 
 (cl-defstruct (indie-org-webmentions-received
                (:constructor nil)
@@ -581,7 +742,29 @@ Returns nil."
   (last-checked nil :documentation "the last time webmentions were checked")
   (last-id nil :documentation "the most-recent webmention ID received")
   ;; hash: page-key :=> (indie-org-webmentions-received-wm...)
-  (mentions (make-hash-table :test 'equal) :documentation "a hash table mapping page key to a list of `indie-org-webmentions-received-wm' instances representing received webmentions"))
+  (mentions (make-hash-table :test 'equal)
+            :documentation "hash table mapping page key to a list of `indie-org-webmentions-received-wm'
+instances representing received webmentions"))
+
+(defun indie-org-webmentions-received-to-plist (received)
+  "Serialize RECEIVED to a property list."
+  (if received
+      (list
+       :last-checked (indie-org-webmentions-received-last-checked received)
+       :last-id      (indie-org-webmentions-received-last-id received)
+       :mentions     (indie-org-serde-hash-to-plist
+                      (indie-org-webmentions-received-mentions received)
+                      #'indie-org-webmentions-received-wm-list-to-plist))))
+
+(defun indie-org-webmentions-received-from-plist (plist)
+  "Deserialize PLIST to an `indie-org-webmentions-received' instance."
+  (indie-org-webmentions-make-received
+   :last-checked (plist-get plist :last-checked)
+   :last-id      (plist-get plist :last-id)
+   :mentions     (indie-org-serde-plist-to-hash
+                  (plist-get plist :mentions)
+                  :test #'equal
+                  :deserializer #'indie-org-webmentions-received-wm-list-from-plist)))
 
 (defun indie-org-webmentions-received-for-page-key (received page-key)
     "Return a list of webmentions-received for a given PAGE-KEY.
@@ -713,17 +896,14 @@ mentions)."
                       :content content
                       :private (gethash "wm-private" entry)))
                     (domain-with-authority (concat "https://" domain))
-                    ;; TODO(sp1ff): this this is a subtle landmine; throughout
-                    ;; this file, "page-key" is described as "any string which
-                    ;; uniquely identifies a page"; but _now_ it had better be
-                    ;; the page's path on the site:
+                    ;; throughout this file, "page-key" is described as "any
+                    ;; string which uniquely identifies a page"; but _now_ it
+                    ;; had better be the page's path on the site. See the
+                    ;; comments in indie-org-page-key.el.
                     (page-key (indie-org-page-key-from-url domain-with-authority target))
-                    ;; TODO(sp1ff): (cont'd) we _could_ preserve that flexibility
-                    ;; by defining a function to be used here that maps URL to
-                    ;; page-key.
                     (wms (gethash page-key mentions)))
                ;; `wms' is a list of `indie-org-received-wm'
-               ;; TODO(sp1ff): re-factor to make use of `indie-org-webmentions-add-received-wm'
+               ;; Could re-factor to make use of `indie-org-webmentions-add-received-wm'
                (unless
                    (cl-find
                     wm wms
@@ -783,7 +963,6 @@ mentions)."
 ;; processed. I just accumulate WM until the entire project is
 ;; published, at which point I commit it all to disk.
 
-;; TODO(sp1ff): make the keyword :indie-org/mentions customizable
 (defun indie-org-webmentions-record-webmention (link info)
   "Note the fact that the current page mentions LINK in INFO.
 
@@ -834,20 +1013,20 @@ Link export functions are invoked with:
   "Enable webmentions support."
   (org-link-set-parameters
    "mention"
-   :follow #'indie-org-browse-mention
-   :export #'indie-org-export-mention)
+   :follow #'indie-org-webmentions-browse-mention
+   :export #'indie-org-webmentions-export-mention)
   (org-link-set-parameters
    "reply"
-   :follow #'indie-org-browse-mention
-   :export #'indie-org-export-reply)
+   :follow #'indie-org-webmentions-browse-mention
+   :export #'indie-org-webmentions-export-reply)
   (org-link-set-parameters
    "like"
-   :follow #'indie-org-browse-mention
-   :export #'indie-org-export-like)
+   :follow #'indie-org-webmentions-browse-mention
+   :export #'indie-org-webmentions-export-like)
   (org-link-set-parameters
    "repost"
-   :follow #'indie-org-browse-mention
-   :export #'indie-org-export-repost))
+   :follow #'indie-org-webmentions-browse-mention
+   :export #'indie-org-webmentions-export-repost))
 
 (provide 'indie-org-webmentions)
 ;;; indie-org-webmentions.el ends here.

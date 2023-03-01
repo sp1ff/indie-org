@@ -12,7 +12,7 @@ dist_noinst_LISP = indie-org-webmentions-tests.el \
 		   test-state.el                  \
 		   indie-org-tests.el
 
-EXTRA_DIST = $(TESTS) test-state.1
+EXTRA_DIST = $(TESTS) test-state.1 test-state.2 test-state.3
 
 AM_TESTS_ENVIRONMENT =   \
 	srcdir=$(srcdir) \

@@ -245,41 +245,5 @@
     (should (indie-org-webmentions-received-last-checked received))
     (should (eq 1499344 (indie-org-webmentions-received-last-id received)))))
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                  unit tests for the publication process                   ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; TODO(sp1ff): move 👇 to test for indie-org-pub
-
-;; (defun mock-find-date (file project) (current-time))
-
-;; (ert-deftest indie-org-webmentions-tests-pub ()
-;;   "Publication tests."
-;;   ;; TODO(sp1ff): This feels dirty...
-;;   (org-export-define-derived-backend 'indie-org 'html
-;;     :options-alist '((:draft "DRAFT" nil nil t)
-;;                      (:updated "UPDATED" nil nil parse)
-;;                      (:posse "POSSE" nil nil space)))
-;;   (let* ((made (indie-org-webmentions-make-made))
-;;          (hash (indie-org-webmentions-made-hash made))
-;;          (info (list :indie-org/webmentions-made made
-;;                      :indie-org/publishing-root "www"
-;;                      :output-file "www/foo.html"
-;;                      :input-file "foo.org"
-;;                      :date "<2022-12-28 Wed 07:37>")))
-;;     (indie-org-webmentions-export-reply "https://foo.com" "foo" 'indie-org info)
-;;     (indie-org-webmentions-export-like "https://bar.com" "bar" 'indie-org info)
-;;     (indie-org-webmentions-export-repost "https://splat.com" "splat" 'indie-org info)
-;;     (advice-add 'org-publish-find-date :override #'mock-find-date)
-;;     (indie-org-webmentions--finalize-page 'indie-org info)
-;;     ;; Should probably use `unwind-protect' here, but I'm afraid it will
-;;     ;; interfere with ert.
-;;     (advice-remove 'org-publish-find-date #'mock-find-date)
-;;     (message "%S" hash)
-;;     ;; one page-key
-;;     (should (eq (hash-table-count hash) 1))))
-
-
 (provide 'indie-org-webmentions-tests)
 ;;; indie-org-webmentions-tests.el ends here

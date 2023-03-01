@@ -1,5 +1,22 @@
 indie-org News -- history of user-visible changes                -*- outline -*-
 
+* indie-org 0.4
+
+* 0.4.0 build
+
+** #4 indie-org-posse-syndicated-copies is never used
+
+This commit removes "syndicated copies" from `indie-org-state`.
+This is another breaking change since it introduces new versions
+of two structs:
+
+    1. `indie-org-state-v2`
+    2. `indie-org-posse-response-v2`
+
+It also re-writes the serde logic to no longer use the print form
+of structs, but rather serializes them to property lists in the
+hopes that future changes to structs won't necessitate introducing
+new versions thereof.
 * indie-org 0.3
 
 ** 0.3.1 build

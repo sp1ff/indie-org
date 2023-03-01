@@ -52,10 +52,15 @@
 
 (ert-deftest test-state-smoke ()
   "Smoke tests for `indie-org-state'."
-  (let ((state (list :prod (indie-org-make-publication-state)))
+  (let ((state (list :prod (indie-org-state-make)))
         (now (current-time)))
     (indie-org-state-update-last-published state now)
-    (should (equal now (indie-org-state-get-last-published state)))))
+    (should (equal now (indie-org-state-get-last-published state))))
+  (let ((state-v1 (indie-org-make-publication-state))
+        (now (current-time)))
+    (setf (indie-org-state-last-published state-v1) now)
+    (let ((state-v2 (indie-org-state-v2-from-v1 state-v1)))
+      (should (equal now (indie-org-state-v2-last-published state-v2))))))
 
 (defmacro with-advised-message (buf &rest body)
   "Execute BODY with `message' advised to concatenate output to BUF."
@@ -70,12 +75,13 @@
 
 (ert-deftest test-state-pp ()
   "Test pretty-printing state."
-  (let* ((pub-state (indie-org-make-publication-state))
-         (now (indie-org-state-last-published pub-state))
+  (let* ((pub-state (indie-org-state-make))
+         (now (current-time))
          (fmtd-now (format-time-string "%Y-%m-%d %H:%M:%S" now))
          (urls '("https://foo.com" "https://bar.net"))
          (made (indie-org-webmentions-make-made))
          (sent (indie-org-webmentions-make-sent)))
+    (setf (indie-org-state-v2-last-published pub-state) now)
     (indie-org-webmentions-update-made made "a/b/c.html" now urls)
     ;; `made' should now contain these mentions made
     ;; (indie-org-webmentions--update-sent
@@ -83,7 +89,7 @@
     ;;  (indie-org-webmentions--make-sent-wm
     ;;   :source "a/b/c.html"
     ;;   :target "https://foo.com"))
-    (setf (indie-org-state-webmentions-made pub-state) made)
+    (setf (indie-org-state-v2-webmentions-made pub-state) made)
     (let* ((text "")
            (state (list :prod pub-state)))
       (with-advised-message text (indie-org-state-pp state))
@@ -100,7 +106,7 @@
         text)))))
 
 (ert-deftest test-state-v1 ()
-  "Test deserializing version 1."
+  "Test deserializing version 1 of the serialization format."
   (let* ((state (indie-org-state-read
                 (concat
                  (file-name-as-directory (expand-file-name srcdir))
@@ -109,36 +115,36 @@
     (should
      (equal
       '(25520 42873 217813 227000)
-      (indie-org-state-last-published prod)))
+      (indie-org-state-v2-last-published prod)))
 
-    ;; TODO(sp1ff): Ughh... maket this more ergonomic
-    (let ((made (indie-org-state-webmentions-made prod)))
-      (should
-       (equal
-        '("https://webmention.rocks/test/1")
+    (should
+     (equal
+      '("https://webmention.rocks/test/1")
+      (gethash
+       '(25282 4388)
+       (indie-org-webmentions-targets-hash
         (gethash
-         '(25282 4388)
-         (indie-org-webmentions-targets-hash
-          (gethash "blog/webmentions-ann.html" (indie-org-webmentions-made-hash made)))))))
+         "blog/webmentions-ann.html"
+         (indie-org-webmentions-made-hash
+          (indie-org-state-v2-webmentions-made prod)))))))
 
-    ;; TODO(sp1ff): Ughh... maket this more ergonomic
-    (let ((sent (indie-org-state-webmentions-sent prod)))
-      (should
-       (equal
+    (should
+     (equal
+      (gethash
+       "https://indieweb.org/webmention-implementation-details#types_of_mentions"
+       (indie-org-webmentions-send-targets-hash
         (gethash
-         "https://indieweb.org/webmention-implementation-details#types_of_mentions"
-         (indie-org-webmentions-send-targets-hash
-          (gethash
-           "blog/webmentions-test.html"
-           (indie-org-webmentions-sent-hash sent))))
-        (list
-         (indie-org-webmentions-make-sent-wm
-          :source "blog/webmentions-test.html"
-          :target "https://indieweb.org/webmention-implementation-details#types_of_mentions"
-          :time-sent '(25282 10227 399117 294000)
-          :status "https://telegraph.p3k.io/webmention/16f9yhNMFnhdMFYBOC")))))
-
-    (let ((recvd (indie-org-state-webmentions-received prod)))
+         "blog/webmentions-test.html"
+         (indie-org-webmentions-sent-hash
+          (indie-org-state-v2-webmentions-sent prod)))))
+      (list
+       (indie-org-webmentions-make-sent-wm
+        :source "blog/webmentions-test.html"
+        :target "https://indieweb.org/webmention-implementation-details#types_of_mentions"
+        :time-sent '(25282 10227 399117 294000)
+        :status "https://telegraph.p3k.io/webmention/16f9yhNMFnhdMFYBOC"))))
+    
+    (let ((recvd (indie-org-state-v2-webmentions-received prod)))
       (should
        (equal
         (indie-org-webmentions-received-last-checked recvd)
@@ -150,18 +156,59 @@
       (let ((hash (indie-org-webmentions-received-mentions recvd)))
         (should (equal 3 (length (gethash "blog/indieweb-markup.html" hash))))))
 
-    (let* ((posse-req (indie-org-state-posse-requests prod))
+    (let* ((posse-req (indie-org-state-v2-posse-requests prod))
            (reqs (gethash "blog/webmentions-ann.html" (indie-org-posse-requests-hash posse-req))))
       (should (equal reqs '(:twitter))))
 
-    ;; (#s(indie-org-posse-response :twitter "Tue Jul 05 00:15:32 +0000 2022" "1544112708181794821" "unwoundstack can now send &amp; receive Webmentions: https://t.co/23cPkyQoZ0" "https://twitter.com/unwoundstack/status/1544112708181794821"))
-    (let* ((posse-rsps (indie-org-state-posse-responses prod))
+    ;; (#s(indie-org-posse-response :twitter "Tue Jul 05 00:15:32 +0000 2022"
+    ;; "1544112708181794821"
+    ;; "unwoundstack can now send &amp; receive Webmentions: https://t.co/23cPkyQoZ0"
+    ;; "https://twitter.com/unwoundstack/status/1544112708181794821"))
+    (let* ((posse-rsps (indie-org-state-v2-posse-responses prod))
            (rsps (gethash "blog/webmentions-ann.html" (indie-org-posse-responses-hash posse-rsps))))
       (should
        (equal 1 (length rsps)))
       (let ((rsp (car rsps)))
         (should (eq :twitter (indie-org-posse-response-sort rsp)))
-        (should (equal "1544112708181794821" (indie-org-posse-response-id rsp)))))))
+        (should (equal "1544112708181794821" (indie-org-posse-response-id rsp)))))
+
+    ;; `state' appears to have been deserialized correctly from a v1 state file. Now
+    ;; let's write it out as v3, then re-read & compare.
+    (let ((state-file (make-temp-file "indie-org-test-state-v1")))
+      (indie-org-state-write state state-file)
+      (let ((state2 (indie-org-state-read state-file)))
+        ;; This fails with a massive stack trace:
+        ;; (should (equal state state2))
+        ;; so let's do this incrementally:
+        (should
+         (equal
+          (indie-org-state-v2-last-published prod)
+          (indie-org-state-v2-last-published (plist-get state2 :prod))))))))
+
+(ert-deftest test-state-v2 ()
+  "Test deserializing version 2 of the format."
+  (let* ((state (indie-org-state-read
+                 (concat
+                  (file-name-as-directory (expand-file-name srcdir))
+                  "test-state.2")))
+         (prod (plist-get state :prod)))
+    (should
+     (equal
+      '(25586 51689 266183 351000)
+      (indie-org-state-v2-last-published prod)))
+
+    ;; `state' appears to have been deserialized correctly from a v1 state file. Now
+    ;; let's write it out as v3, then re-read & compare.
+    (let ((state-file (make-temp-file "indie-org-test-state-v2")))
+      (indie-org-state-write state state-file)
+      (let ((state2 (indie-org-state-read state-file)))
+        ;; This fails with a massive stack trace:
+        ;; (should (equal state state2))
+        ;; so let's do this incrementally:
+        (should
+         (equal
+          (indie-org-state-v2-last-published prod)
+          (indie-org-state-v2-last-published (plist-get state2 :prod))))))))
 
 (provide 'test-state)
 ;;; test-state.el ends here
