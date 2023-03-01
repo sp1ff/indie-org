@@ -17,13 +17,12 @@
 
 ;;; Commentary:
 
-;;;; Introduction:
-
 ;; Supporting various Indieweb features such as Webmentions & POSSE requires
 ;; maintaining state regarding site publication.  For instance, every time one
 ;; publishes the site (whether to prod, staging, or somewhere else) one now
 ;; needs to scribble down new webmentions that need to be sent for subsequent
-;; use.  Incoming webmentions also need to be written down.
+;; use.  Incoming webmentions also need to be written down upon receipt (for
+;; potential use in subsequent publications).
 
 ;; This package defines that state, as well as providing a serde mechanism.
 ;; The goal is to have web sites built on `indie-org' be able to add site-
@@ -38,16 +37,7 @@
 ;; parallel publication targets for your site.  These are meant to be defined
 ;; on a site-by-site basis & named by keywords.  For instance, one might want a
 ;; development, staging & production copy of one's site (and one might name
-;; them :dev, :stg & :prod).
-
-;; The serde mechanism allows for versioning by tagging the serialized state
-;; with a version tag.  On read, older versions can still be deserialized and
-;; converted to the current format.  If the site has defined its own custom
-;; state, it will have to provide deserialization methods to provide this
-;; feature.
-
-;; In particular, the 0.3 build of `indie-org' significantly changed the
-;; state representation.
+;; them `:dev', `:stg' & `:prod').
 
 ;; To continue, the indie-org publication state serialization format for the
 ;; above example site would be something like:
@@ -59,14 +49,25 @@
 ;;             :stg <printed repr of `my-site-state' for the staging site>
 ;;             :dev <printed repr of `my-site-state' for the dev site>))
 
+;; The serde mechanism allows for versioning by tagging the serialized state
+;; with a version tag.  On read, older versions can still be deserialized and
+;; converted to the current format.  If the site has defined its own custom
+;; state, it will have to provide deserialization methods to provide this
+;; feature.
+
+;; In particular, the 0.3 & 0.4 builds of `indie-org' significantly changed the
+;; state representation.  Versions 0.1 & 0.2 used an archaic state
+;; representation.  Version 0.3 used the print form of the types used in the
+;; implementation for serde, but the author quickly realized that this made
+;; updating structs inconvenient & so switched to the present approach of
+;; converting structs to property lists & using _their_ print form.
+
 ;;; Code:
 (require 'cl-lib)
 (require 'indie-org-webmentions)
 (require 'indie-org-posse)
 
-;; TODO(sp1ff): Make this customizable? Or leave it a const & let the caller
-;; specify a different version in method calls?
-(defconst indie-org-state-serde-current-format 2
+(defconst indie-org-state-serde-current-format 3
   "The most recent publication state serialization format.")
 
 (defvar indie-org-state-fallbacks (make-hash-table))
@@ -74,16 +75,9 @@
 (cl-defstruct (indie-org-state
                (:constructor nil)
                (:constructor
-                ;; TODO(sp1ff): rename this to `indie-org-state-new' or something
                 indie-org-make-publication-state))
-  "Site state for a given publication environment as maintained by indie-org.
-
-This struct maintains collections of webmentions received & POSSE
-responses for each publication environment.  That may seem
-surprising, but this opens-up the possibility of sending
-webmentions or POSSE requests differently in different
-environments (webmentin.io & brid.gy for production, mocks for
-dev, e.g.)"
+  "This struct is deprecated & will be removed in a subsequent
+release. Use `indie-org-state-v2' instead."
   (last-published nil :type list
                   :documentation "The Lisp timestamp of the most recent publication")
   (webmentions-made nil :type indie-org-webmentions-made)
@@ -93,38 +87,118 @@ dev, e.g.)"
   (posse-responses nil :type indie-org-posse-responses)
   (syndication-links nil :type indie-org-posse-syndicated-copies))
 
+(make-obsolete 'indie-org-state 'indie-org-state-v2 "0.3")
+
+(cl-defstruct (indie-org-state-v2
+               (:constructor nil)
+               (:constructor
+                indie-org-state-make))
+  "Site state for a given publication environment as maintained by indie-org.
+
+This struct maintains collections of webmentions received & POSSE
+responses for each publication environment.  That may seem
+surprising, but this opens-up the possibility of sending
+webmentions or POSSE requests differently in different
+environments (webmentin.io & brid.gy for production, mocks for
+dev, e.g.)"
+  (last-published nil :type list :documentation "The Lisp timestamp of the most recent publication")
+  (webmentions-made nil :type indie-org-webmentions-made)
+  (webmentions-sent nil :type indie-org-webmentions-sent)
+  (webmentions-received nil :type indie-org-webmentions-received)
+  (posse-requests nil :type indie-org-posse-requests)
+  (posse-responses nil :type indie-org-posse-responses))
+
+(defun indie-org-state-v2-from-v1 (old-state)
+  "Convert OLD-STATE from an `indie-or-state' to an `indie-org-state-v2'."
+  ;; It's mostly a matter of just copying over old members, while dropping
+  ;; syndicated copies...
+  (indie-org-state-make
+   :last-published       (indie-org-state-last-published       old-state)
+   :webmentions-made     (indie-org-state-webmentions-made     old-state)
+   :webmentions-sent     (indie-org-state-webmentions-sent     old-state)
+   :webmentions-received (indie-org-state-webmentions-received old-state)
+   :posse-requests       (indie-org-state-posse-requests       old-state)
+   :posse-responses
+   (indie-org-posse-responses-v2-from-v1
+    (indie-org-state-posse-responses old-state))))
+
 (defun indie-org-state-get-last-published (state &optional env)
   "Retrieve the last-published time in STATE for ENV.
 STATE shall be a property list mapping publication environment
-names to either `indie-org-state' structures or structs that
-subtype `indie-org-state'."
+names to either `indie-org-state-v2' structures or structs that
+subtype `indie-org-state-v2'."
   (let ((env (or env :prod)))
-    (indie-org-state-last-published (plist-get state env))))
+    (indie-org-state-v2-last-published (plist-get state env))))
 
 (defun indie-org-state-update-last-published (state time &optional env)
   "Update the last-published time in STATE to TIME for ENV."
   (let* ((env (or env :prod)))
-    (setf (indie-org-state-last-published (plist-get state env)) time)))
+    (setf (indie-org-state-v2-last-published (plist-get state env)) time)))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                          publication state serde                          ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun indie-org-state--plist-to-state (plist)
+  "Interpret PLIST as an `indie-org-state-v2 instance.
+
+Internal.  Parse the input property list as the current
+publication state representation."
+
+  (indie-org-state-make
+   :last-published (plist-get plist :last-published)
+   :webmentions-made     (indie-org-webmentions-made-from-plist     (plist-get plist :webmentions-made))
+   :webmentions-sent     (indie-org-webmentions-sent-from-plist     (plist-get plist :webmentions-sent))
+   :webmentions-received (indie-org-webmentions-received-from-plist (plist-get plist :webmentions-received))
+   :posse-requests       (indie-org-posse-requests-from-plist       (plist-get plist :posse-requests))
+   :posse-responses      (indie-org-posse-responses-from-plist      (plist-get plist :posse-responses))))
+
+(defun indie-org-state--state-to-plist (state)
+  "Serialize STATE to a property list."
+
+  (list
+   :last-published       (indie-org-state-v2-last-published state)
+   :webmentions-made     (indie-org-webmentions-made-to-plist     (indie-org-state-v2-webmentions-made     state))
+   :webmentions-sent     (indie-org-webmentions-sent-to-plist     (indie-org-state-v2-webmentions-sent     state))
+   :webmentions-received (indie-org-webmentions-received-to-plist (indie-org-state-v2-webmentions-received state))
+   :posse-requests       (indie-org-posse-requests-to-plist       (indie-org-state-v2-posse-requests       state))
+   :posse-responses      (indie-org-posse-responses-to-plist      (indie-org-state-v2-posse-responses      state))))
 
 (defun indie-org-state-read (filename &optional format-version fallbacks)
   "Read FILENAME into a plist mapping publication environment to state.
 FORMAT-VERSION is the current serialization format version number.
 FALLBACKS is a hash table mapping prior format versions to deserializers.
 
-This will read the site publication state file & return the :state portion."
+This will read the site publication state file & return a plist
+mapping publication environment names to `indie-org-state-v2'
+instances.  If FILENAME is in an archaic format (which is to say:
+its version is less than `indie-org-state-serde-current-format'),
+FILENAME will be upgraded to the current format.  A backup will
+be left in the same directory, and the file will be re-written in
+the most recent format."
+
+  ;; We expect the print form for a property list with two properties:
+  ;; `:version' and `:state'; this is consistent across all supported serde
+  ;; format versions.  What has varied has been the value of the `:state'
+  ;; property... how we map that to a plist from publication environment name
+  ;; to `indie-org-state-v2' varies depending on the `:version'.
   (let* ((plist
           (car
            (read-from-string
             (with-temp-buffer
               (insert-file-contents filename)
               (buffer-string)))))
-         (version (plist-get plist :version)))
-    (if (eq version (or format-version indie-org-state-serde-current-format))
-        (plist-get plist :state)
-      (let ((f (gethash version (or fallbacks indie-org-state-fallbacks))))
-        (if f
-            (funcall f plist)
-          (error "Unknown (or missing) publication state format version: %s" version))))))
+         (version (plist-get plist :version))
+         (state
+          (if (eq version (or format-version indie-org-state-serde-current-format))
+              (cl-loop for (key value) on (plist-get plist :state) by 'cddr append
+                       (list key (indie-org-state--plist-to-state value)))
+            (let ((f (gethash version (or fallbacks indie-org-state-fallbacks))))
+              (if f
+                  (funcall f plist)
+                (error "Unknown (or missing) publication state format version: %s" version))))))
+    state))
 
 (defun indie-org--write-sexp-to-file (sexp file-name &optional preamble)
   "Write SEXP to FILE-NAME with optional PREAMBLE.
@@ -192,13 +266,22 @@ itself heavily derivative of `basic-save-buffer-2'."
 
 STATE shall be a property list mapping publication environment
 keywords to `indie-org-publication-state' instances."
+
   (unless (listp state)
     (signal 'wrong-type-argument (list #'listp state)))
   (indie-org--write-sexp-to-file
    (list
     :version (or format-version indie-org-state-serde-current-format)
-    :state state)
+    :state
+    (cl-loop for (key value) on state by 'cddr append
+             (list key (indie-org-state--state-to-plist value))))
    file-name))
+
+(defun indie-org-state-v2-fallback (sexp)
+  "Interpret SEXP as a v2 serialization form."
+  (let ((old-state (plist-get sexp :state)))
+    (cl-loop for (key value) on old-state by 'cddr append
+             (list key (indie-org-state-v2-from-v1 value)))))
 
 (defun indie-org-state-v1-fallback (sexp)
   "Interpret SEXP as a v1 serialization format."
@@ -215,8 +298,8 @@ keywords to `indie-org-publication-state' instances."
           (while value
             (let* ((env (car value))
                    (time (cadr value))
-                   (state (or (gethash env hash) (indie-org-make-publication-state))))
-              (setf (indie-org-state-last-published state) time)
+                   (state (or (gethash env hash) (indie-org-state-make))))
+              (setf (indie-org-state-v2-last-published state) time)
               (puthash env state hash))
             (setq value (cddr value))))
          ((eq key :webmentions-made)
@@ -226,8 +309,8 @@ keywords to `indie-org-publication-state' instances."
           (while value
             (let* ((env (car value))
                    (hash1 (cadr value))
-                   (state (or (gethash env hash) (indie-org-make-publication-state)))
-                   (made (or (indie-org-state-webmentions-made state) (indie-org-webmentions-make-made))))
+                   (state (or (gethash env hash) (indie-org-state-make)))
+                   (made (or (indie-org-state-v2-webmentions-made state) (indie-org-webmentions-make-made))))
               ;; Iterate over `hash1'-- keys are page-keys and values are hash tables.
               (maphash
                (lambda (page-key hash2)
@@ -238,7 +321,7 @@ keywords to `indie-org-publication-state' instances."
                     (indie-org-webmentions-update-made made page-key update-time mentions))
                   hash2))
                hash1)
-              (setf (indie-org-state-webmentions-made state) made)
+              (setf (indie-org-state-v2-webmentions-made state) made)
               (puthash env state hash))
             (setq value (cddr value))))
          ((eq key :webmentions-sent)
@@ -248,8 +331,8 @@ keywords to `indie-org-publication-state' instances."
           (while value
             (let* ((env (car value))
                    (hash1 (cadr value))
-                   (state (or (gethash env hash) (indie-org-make-publication-state)))
-                   (sent (or (indie-org-state-webmentions-sent state) (indie-org-webmentions-make-sent))))
+                   (state (or (gethash env hash) (indie-org-state-make)))
+                   (sent (or (indie-org-state-v2-webmentions-sent state) (indie-org-webmentions-make-sent))))
               ;; Iterate over `hash1'-- keys are page keys and values are hash
               ;; tables.
               (maphash
@@ -271,7 +354,7 @@ keywords to `indie-org-publication-state' instances."
                       (setq sent-wms (cdr sent-wms))))
                   hash2))
                hash1)
-              (setf (indie-org-state-webmentions-sent state) sent)
+              (setf (indie-org-state-v2-webmentions-sent state) sent)
               (puthash env state hash))
             (setq value (cddr value))))
          ((eq key :webmentions-received)
@@ -286,7 +369,7 @@ keywords to `indie-org-publication-state' instances."
             ;; contain `indie-org-received-wm-author' and
             ;; `indie-org-received-wm-author' instances, so we need to build-up
             ;; an `indie-org-webmentions-received-wm' one-by-one.
-            (let ((state (or (gethash :prod hash) (indie-org-make-publication-state)))
+            (let ((state (or (gethash :prod hash) (indie-org-state-make)))
                   (recvd (indie-org-webmentions-make-received)))
               (setf (indie-org-webmentions-received-last-checked recvd) last-checked)
               (setf (indie-org-webmentions-received-last-id recvd) last-id)
@@ -321,69 +404,39 @@ keywords to `indie-org-publication-state' instances."
                      (indie-org-webmentions-add-received-wm recvd page-key received-wm))
                    (setq received-wms (cdr received-wms))))
                mentions)
-              (setf (indie-org-state-webmentions-received state) recvd)
+              (setf (indie-org-state-v2-webmentions-received state) recvd)
               (puthash :prod state hash))))
          ((eq key :syndication-links)
-          ;; TODO(sp1ff): not sure how to test this-- my 0.2 state files don't
-          ;; contain any(!)
-          ;; `value' is a plist mapping pub env to hash table; each hash
-          ;; table maps page-key to a list of `indie-org-syndicated-copy'.
-          (while value
-            (let* ((env (car value))
-                   (hash1 (cadr value))
-                   (state (or (gethash env hash) (indie-org-make-publication-state)))
-                   (copies (or (indie-org-state-syndicated-links state (indie-org-posse-make-syndicated-copies)))))
-              ;; Iterate over `hash1'-- keys are page keys and values are lists.
-              (maphash
-               (lambda (page-key old-copies)
-                 (while old-copies
-                   (let* ((old-copy (car old-copies))
-                          ;; The problem is that `old-copy' is an
-                          ;; `indie-org-syndicated-copy'-- need to convert to
-                          ;; an `indie-org-posse-syndicated-copy'.
-                          (new-copy
-                           (indie-org-posse-make-syndicated-copy
-                            :silo (indie-org-syndicated-copy-silo old-copy)
-                            :url  (indie-org-syndicated-copy-url old-copy)
-                            :type (indie-org-syndicated-copy-type old-copy)
-                            :id   (indie-org-syndicated-copy-id old-copy)))
-                          (hash (indie-org-posse-syndicated-copies-hash copies)))
-                     ;; TODO(sp1ff): this is kinda lame-- I should really check
-                     ;; the ID of the syndicated copy.
-                     (puthash page-key (cons new-copy (gethash page-key hash))  hash))
-                   (setq old-copies (cdr old-copies))))
-               hash1)
-              (setf (indie-org-state-syndicated-links state) copies)
-              (puthash env state hash))
-            (setq value (cddr value))))
+          ;; pass
+          )
          ((eq key :posse-requests)
           ;; `value' is a plist mapping pub env to hash table. The hash
           ;; tables map page-keys to lists of posse target keywords.
           (while value
             (let* ((env (car value))
                    (hash1 (cadr value))
-                   (state (or (gethash env hash) (indie-org-make-publication-state)))
-                   (requests (or (indie-org-state-posse-requests state) (indie-org-posse-make-requests))))
+                   (state (or (gethash env hash) (indie-org-state-make)))
+                   (requests (or (indie-org-state-v2-posse-requests state) (indie-org-posse-make-requests))))
               ;; Iterate over `hash1'
               (maphash
                (lambda (page-key old-requests)
                  (puthash page-key old-requests (indie-org-posse-requests-hash requests)))
                hash1)
-              (setf (indie-org-state-posse-requests state) requests)
+              (setf (indie-org-state-v2-posse-requests state) requests)
               (puthash env state hash))
             (setq value (cddr value))))
          ((eq key :posse-responses)
           ;; `value' is a hash table mapping page keys to lists of
           ;; `indie-org-posse-response' for :prod.
-          (let* ((state (or (gethash :prod hash) (indie-org-state-make-publication-state)))
-                 (rsps (or (indie-org-state-posse-responses state) (indie-org-posse-make-responses))))
+          (let* ((state (or (gethash :prod hash) (indie-org-state-make)))
+                 (rsps (or (indie-org-state-v2-posse-responses state) (indie-org-posse-make-responses))))
             (maphash
              (lambda (page-key old-rsps)
                (while old-rsps
                  (let* ((old-rsp (car old-rsps))
                         ;; Convert `old-rsp' to and `indie-org-posse-resposne'
                         (new-rsp
-                         (indie-org-posse-make-response
+                         (indie-org-posse-make-response-v2
                           :sort (indie-org-posse-response-sort old-rsp)
                           :created-at (indie-org-posse-response-created-at old-rsp)
                           :id (indie-org-posse-response-id old-rsp)
@@ -392,7 +445,7 @@ keywords to `indie-org-publication-state' instances."
                    (indie-org-record-sent-posse page-key new-rsp rsps))
                  (setq old-rsps (cdr old-rsps))))
              value)
-            (setf (indie-org-state-posse-responses state) rsps)
+            (setf (indie-org-state-v2-posse-responses state) rsps)
             (puthash :prod state hash)))))
       (setq old-state (cddr old-state)))
     ;; Convert `hash' into a property list
@@ -406,9 +459,9 @@ keywords to `indie-org-publication-state' instances."
 ;;;###autoload
 (defun indie-org-state-enable ()
   "Initialize the indie-org-state package."
-  (puthash 1 #'indie-org-state-v1-fallback indie-org-state-fallbacks))
+  (puthash 1 #'indie-org-state-v1-fallback indie-org-state-fallbacks)
+  (puthash 2 #'indie-org-state-v2-fallback indie-org-state-fallbacks))
 
-;; TODO(sp1ff): archaic... can we alias this, somehow?
 (cl-defstruct (indie-org-sent-wm
                ;; Disable the default ctor (the name violates Emacs
                ;; package naming conventions)
@@ -437,15 +490,19 @@ webmention kind (generic mention, reply, and so forth) as a
 keyword."
   source target time-sent status kind)
 
+(make-obsolete 'indie-org-sent-wm "No longer used" "0.3")
+
 (cl-defstruct (indie-org-received-wm-author
-               ;; Disable the default ctor (the name violates Emacs
-               ;; package naming conventions)
+;; Disable the default ctor (the name violates Emacs
+;; package naming conventions)
                (:constructor nil)
                (:constructor
                 indie-org-make-received-wm-author
                 (&key name photo type url)))
   "Author of a received webmention."
   name photo type url)
+
+(make-obsolete 'indie-org-received-wm-author "No longer used" "0.3")
 
 (cl-defstruct (indie-org-received-wm-content
                ;; Disable the default ctor (the name violates Emacs
@@ -470,14 +527,16 @@ keyword."
   "Received webmention. CONTENT may be nil."
   id sort time-received source target author content private)
 
+(make-obsolete 'indie-org-received-wm "No longer used" "0.3")
+
 (cl-defstruct (indie-org-syndicated-copy
                ;; Disable the default ctor (the name violates Emacs
                ;; package naming conventions)
                (:constructor nil)
-               ;; Abuse the &aux keyword to validate our parameters; I
-               ;; can only specify type in the slot description if I
-               ;; specify a default value for the slot, which doesn't
-               ;; always make sense.
+        ;; Abuse the &aux keyword to validate our parameters; I
+        ;; can only specify type in the slot description if I
+        ;; specify a default value for the slot, which doesn't
+        ;; always make sense.
                (:constructor
                 indie-org-make-syndicated-copy
                 (&key silo url type id
@@ -486,7 +545,9 @@ keyword."
                        (unless (memq silo '(:twitter :mastodon))
                          (error "%s not supported" silo))))))
   "A syncidated copy of a post"
-  silo url type id)
+  )
+
+(make-obsolete 'indie-org-syndicated-copy "No longer used" "0.3")
 
 (cl-defstruct (indie-org-posse-response
                ;; Disable the default ctor (the name violates Emacs
@@ -516,28 +577,25 @@ created, ID it's silo-defined identifer, TEXT the text comprising
 the siloed entity and URL it's, well, URL."
   sort created-at id text url)
 
-;; TODO(sp1ff): clean-up 👇
-
+(make-obsolete 'indie-org-posse-response "No longer used" "0.3")
 
 (defun indie-org-state--pp-state (env state)
   "Pretty-print publication state STATE for environment ENV."
-  (let ((wm-made (indie-org-state-webmentions-made state))
-        (wm-sent (indie-org-state-webmentions-sent state))
-        (wm-recv (indie-org-state-webmentions-received state))
-        (posse-req (indie-org-state-posse-requests state))
-        (posse-rsp (indie-org-state-posse-responses state))
-        (synd (indie-org-state-syndication-links state)))
+  (let ((wm-made (indie-org-state-v2-webmentions-made state))
+        (wm-sent (indie-org-state-v2-webmentions-sent state))
+        (wm-recv (indie-org-state-v2-webmentions-received state))
+        (posse-req (indie-org-state-v2-posse-requests state))
+        (posse-rsp (indie-org-state-v2-posse-responses state)))
     (message "%s:\n    Last published: %s"
              env
              (format-time-string
               "%Y-%m-%d %H:%M:%S"
-              (indie-org-state-last-published state)))
+              (indie-org-state-v2-last-published state)))
     (and wm-made (indie-org-webmentions-pp-made wm-made 1))
     (and wm-sent (indie-org-webmentions-pp-sent wm-sent 1))
     (and wm-recv (indie-org-webmentions-pp-received wm-recv 1))
     (and posse-req (indie-org-posse-pp-requests posse-req 1))
-    (and posse-rsp (indie-org-posse-pp-responses posse-rsp 1))
-    (and synd (indie-org-posse-pp-syndicated-copies synd 1))))
+    (and posse-rsp (indie-org-posse-pp-responses posse-rsp 1))))
 
 (defun indie-org-state-pp (publication-state)
   "Pretty-print the publication state in PUBLICATION-STATE."

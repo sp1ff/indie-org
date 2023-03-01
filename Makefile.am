@@ -1,4 +1,5 @@
 dist_lisp_LISP = indie-org-page-key.el    \
+		 indie-org-serde.el       \
 		 indie-org-webmentions.el \
 		 indie-org-posse.el       \
 		 indie-org-rss.el         \
