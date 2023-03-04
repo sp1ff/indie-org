@@ -1,3 +1,15 @@
+2023-03-03  Michael Herstine  <sp1ff@pobox.com>
+
+	Fix serialization of received webmentions.
+	This commit:
+
+	    - BUGFIX: add the :serializer keyword in
+	      `indie-org-webmentions-received-to-plist`
+	    - finally fix the "changing `byte-compile-dest-file`" warnings
+	      during compilation
+
+	Closes #5.
+
 2023-03-01  Michael Herstine  <sp1ff@pobox.com>
 
 	[#4 indie-org-posse-syndicated-copies is never used]

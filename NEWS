@@ -2,6 +2,11 @@ indie-org News -- history of user-visible changes                -*- outline -*-
 
 * indie-org 0.4
 
+* 0.4.1 build
+
+** #5 received webmentions serialized incorrectly
+
+Bugfix: received webmentions were being serialized to all nil.
 * 0.4.0 build
 
 ** #4 indie-org-posse-syndicated-copies is never used

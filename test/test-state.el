@@ -79,8 +79,7 @@
          (now (current-time))
          (fmtd-now (format-time-string "%Y-%m-%d %H:%M:%S" now))
          (urls '("https://foo.com" "https://bar.net"))
-         (made (indie-org-webmentions-make-made))
-         (sent (indie-org-webmentions-make-sent)))
+         (made (indie-org-webmentions-make-made)))
     (setf (indie-org-state-v2-last-published pub-state) now)
     (indie-org-webmentions-update-made made "a/b/c.html" now urls)
     ;; `made' should now contain these mentions made
@@ -209,6 +208,55 @@
          (equal
           (indie-org-state-v2-last-published prod)
           (indie-org-state-v2-last-published (plist-get state2 :prod))))))))
+
+(ert-deftest test-issue-5 ()
+  "Regression test for issue #5.
+
+Received webmentions serialized incorrectly"
+  (let* ((wm0
+          (indie-org-webmentions-make-received-wm
+           :id 1633073 :sort :like :time-received '(25601 27765)
+           :source "https://brid.gy/like/twitter/coffeehouset/1631471052848091137/1082821758565019650"
+           :target "https://www.coffeehouse-talker.net/posts/open-letters-to-bruce-mcpherson-2.html"
+           :author (indie-org-webmentions--make-received-wm-author
+                    :name "SantaCruzLocal"
+                    :photo "https://webmention.io/avatar/pbs.twimg.com/f7d0e282e42965a5b8f0f9b37eed6e92476a00708f2846c1facbc26d675946ff.jpg"
+                    :type "card"
+                    :url "https://twitter.com/theSCLocal")))
+         (wm1
+          (indie-org-webmentions-make-received-wm
+           :id 1633074 :sort :reply :time-received '(25601 27767)
+           :source "https://brid.gy/comment/twitter/coffeehouset/1631471052848091137/1631499095700537344"
+           :target "https://www.coffeehouse-talker.net/posts/open-letters-to-bruce-mcpherson-2.html"
+           :author (indie-org-webmentions--make-received-wm-author
+                    :name "SantaCruzLocal"
+                    :photo "https://webmention.io/avatar/pbs.twimg.com/f7d0e282e42965a5b8f0f9b37eed6e92476a00708f2846c1facbc26d675946ff.jpg"
+                    :type "card"
+                    :url "https://twitter.com/theSCLocal")
+           :content (indie-org-webmentions--make-received-wm-content
+                     :html "Thank you !\n<a class=\"u-mention\" href=\"https://slvpost.com/open-letters-to-bruce-mcpherson-and-county-leadership/\"></a>\n<a class=\"u-mention\" href=\"https://twitter.com/CoffeehouseT\"></a>\n<a class=\"u-mention\" href=\"https://twitter.com/SLVPostNews\"></a>"
+                     :text "Thank you !")))
+         (hash (make-hash-table :test #'equal)))
+    (puthash
+     "https://www.coffeehouse-talker.net/posts/open-letters-to-bruce-mcpherson-2.html"
+     (list wm0 wm1) hash)
+    (let* ((recvd
+            (indie-org-webmentions-make-received
+             :last-checked '(25601 27882 230381 375000)
+             :last-id 1633074
+             :mentions hash))
+           (plist (indie-org-webmentions-received-to-plist recvd))
+           (recvd2 (indie-org-webmentions-received-from-plist plist))
+           (hash (indie-org-webmentions-received-mentions recvd2))
+           (wms
+            (gethash
+             "https://www.coffeehouse-talker.net/posts/open-letters-to-bruce-mcpherson-2.html"
+             hash)))
+      (should (eq 2 (length wms)))
+      (let ((wm0 (nth 0 wms))
+            (wm1 (nth 1 wms)))
+        (should (eq 1633073 (indie-org-webmentions-received-wm-id wm0)))
+        (should (eq 1633074 (indie-org-webmentions-received-wm-id wm1)))))))
 
 (provide 'test-state)
 ;;; test-state.el ends here

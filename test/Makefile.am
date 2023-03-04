@@ -1,5 +1,4 @@
-AM_ELCFLAGS = -L ${srcdir}/.. -L ${srcdir}/../contrib
-
+AM_ELCFLAGS = -L ${srcdir}/.. -L ${srcdir}/../contrib --eval '(require (quote bytecomp))'
 TESTS = indie-org-webmentions-tests \
         indie-org-posse-tests       \
 	indie-org-pub-tests         \

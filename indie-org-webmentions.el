@@ -658,9 +658,10 @@ Returns nil."
 
 (defun indie-org-webmentions-received-wm-content-to-plist (content)
   "Serialize CONTENT to a property list."
-  (list
-   :html (indie-org-webmentions--received-wm-content-html content)
-   :text (indie-org-webmentions--received-wm-content-text content)))
+  (if content
+      (list
+       :html (indie-org-webmentions--received-wm-content-html content)
+       :text (indie-org-webmentions--received-wm-content-text content))))
 
 (defun indie-org-webmentions-received-wm-content-from-plist (plist)
   "Deserialize PLIST to an `indie-org-webmentions--received-wm-content' instance."
@@ -754,7 +755,7 @@ instances representing received webmentions"))
        :last-id      (indie-org-webmentions-received-last-id received)
        :mentions     (indie-org-serde-hash-to-plist
                       (indie-org-webmentions-received-mentions received)
-                      #'indie-org-webmentions-received-wm-list-to-plist))))
+                      :serializer #'indie-org-webmentions-received-wm-list-to-plist))))
 
 (defun indie-org-webmentions-received-from-plist (plist)
   "Deserialize PLIST to an `indie-org-webmentions-received' instance."
