@@ -1,5 +1,7 @@
 2023-03-05  Michael Herstine  <sp1ff@pobox.com>
 
+	Create a GHA workflow that will create a release on tag.
+
 	Correct a bug in `indie-org-posse-response-from-plist`. The `:type` keyword was mis-spelled.
 	Closes issue #6.
 

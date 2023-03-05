@@ -12,7 +12,8 @@ The :type field wasn't being read properly.
 Will run on commits & verify the Autotools tarball.
 ** Closed issue #6: `indie-org-posse-response` type being deserialized incorrectly
 
-Fixed a typo on `indie-org-posse-response-from-plist`.
+Fixed a typo on `indie-org-posse-response-from-plist`.]
+** Add a GHA for creating releases
 * 0.4.2 build
 
 Snuck in a quick bugfix regarding POSSE response serialization.
