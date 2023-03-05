@@ -213,7 +213,7 @@ as returned by the silo."
   "Deserialize PLIST to a `indie-org-posse-response-v2' instance."
   (indie-org-posse-make-response-v2
    :sort       (plist-get plist :sort)
-   :created-at (plist-get plist :id)
+   :created-at (plist-get plist :created-at)
    :id         (plist-get plist :id)
    :text       (plist-get plist :text)
    :url        (plist-get plist :url)

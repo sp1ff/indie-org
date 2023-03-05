@@ -1,3 +1,7 @@
+2023-03-04  Michael Herstine  <sp1ff@pobox.com>
+
+	Sneaking-in a quick bugfix in the way POSSE responses are serialized
+
 2023-03-03  Michael Herstine  <sp1ff@pobox.com>
 
 	Fix serialization of received webmentions.
