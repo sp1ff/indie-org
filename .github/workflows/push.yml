@@ -1,0 +1,47 @@
+# On push, test the Autotools-generated tarballs
+name: push
+on:
+  # allow this workflow to be triggered manually, which is what this
+  # event allegedly does
+  workflow_dispatch:
+  # Modifying the push event with 'branches' and 'tags' seems to be an OR operation (i.e. the workflow
+  # will run if either on branch release-infra *or* it has a tag of n.n.n)
+  push:
+
+jobs:
+  # The `push` trigger will work on a `git push` of either a tag or a
+  # commit. We only want to run this workflow for the latter.
+  filter-tag-from-commit:
+    runs-on: ubuntu-latest
+    outputs:
+      is_commit: ${{ steps.checkref.outputs.is_commit }}
+    steps:
+      - id: checkref
+        name: Check git ref
+        run: |
+          echo "DEBUG: GITHUB_REF is ${GITHUB_REF}"
+          if test "${GITHUB_REF:0:11}" == "refs/heads/"; then
+            echo "is_commit=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_commit=no" >> "$GITHUB_OUTPUT"
+          fi
+
+  check-tarball:
+    runs-on: ubuntu-latest
+    needs: filter-tag-from-commit
+    if: ${{ needs.filter-tag-from-commit.outputs.is_commit == 'yes' }}
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v2
+    - name: Install tooling
+      shell: bash
+      run: |
+          pwd
+          set -x
+          sudo apt-get install -y autoconf automake emacs
+          autoconf --version
+          automake --version
+          emacs --version
+    - name: Run the Autotools test script
+      shell: bash
+      run: test/test-autotools-distro

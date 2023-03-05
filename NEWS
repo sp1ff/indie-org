@@ -2,6 +2,14 @@ indie-org News -- history of user-visible changes                -*- outline -*-
 
 * indie-org 0.4
 
+* 0.4.3 build
+
+** Fixed a bug in `indie-org-posse-response-from-plist`
+
+The :type field wasn't being read properly.
+** Introduced the project's first Github Action
+
+Will run on commits & verify the Autotools tarball.
 * 0.4.2 build
 
 Snuck in a quick bugfix regarding POSSE response serialization.

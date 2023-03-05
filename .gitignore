@@ -8,3 +8,4 @@ configure
 *.xz
 *.zst
 env.sh
+run-lints

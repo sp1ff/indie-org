@@ -22,6 +22,7 @@
 ;;; Code:
 (require 'indie-org-page-key)
 (require 'indie-org-serde)
+(require 'parse-time)
 (require 'request)
 (require 'ol)
 (require 'ox)
@@ -890,7 +891,13 @@ mentions)."
                       :id id
                       :sort (indie-org-webmentions--string-to-wm-sort (gethash "wm-property" entry))
                       :time-received
-                      (encode-time (parse-time-string (gethash "wm-received" entry)))
+                      ;; Workaround for bug <https://debbugs.gnu.org/cgi/bugreport.cgi?bug=39001>
+                      ;; Fix introduced in 28.1.
+                      (let ((wmr (gethash "wm-received" entry)))
+                        (encode-time
+                         (if (version< emacs-version "28.1")
+                             (decode-time (parse-iso8601-time-string wmr))
+                           (parse-time-string wmr))))
                       :source (gethash "wm-source" entry)
                       :target target
                       :author author

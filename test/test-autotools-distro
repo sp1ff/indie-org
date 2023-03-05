@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# Script for testing the Autotools distribution. Run this as `test-autotools-distro`-- it will:
+#
+# 1. clean-out any prior builds from `/tmp` altogether
+# 2. do a VPATH build
+# 3. test building & testing the Autotools distro (i.e. run `make distcheck`)
+#
+# It will leave behind:
+#
+# 1. `/tmp/indie-org` :: builddir, incl. Autotols tarballs & Emacs package
+# 2. `/tmp/indie-org-${version}.tar :: Emacs package
+# 2. `/tmp/indie-org-${version}.tar.{gz,xz,zst}` :: tarballs
+
+# Find the root directory of this project: $here is absolute path to the
+# directory in which this file is located; $root is the absolute path to the
+# project root.
+dn="$(dirname $0)"
+if [ '/' == ${dn:0:1} ]; then
+    here="$dn"
+else
+    here="$(cd $dn; pwd)"
+fi
+root=$(realpath "${here}/..")
+
+set -ex
+
+cd $root
+export version=`awk '/^AC_INIT/ {print substr($2, 2, length($2)-3)}' configure.ac`
+echo "Building indie-org version $version..."
+set +e # next step may fail
+make distclean
+set -e
+./bootstrap
+cd /tmp
+if test -d indie-org/indie-org-${version}; then
+    chmod -R a+w indie-org/indie-org-${version}
+fi
+for d in `ls -d indie-org-*`; do
+    rm -rf $d; done
+rm -f indie-org-*.tar*
+rm -rf .indie-org-pkg-test
+rm -rf indie-org && mkdir indie-org && cd indie-org
+$root/configure
+make
+set +e # May fail
+if ! make check; then
+    echo "Building indie-org version $version...FAILED(test log follows)."
+    cat test/test-suite.log
+    exit 1
+fi
+echo "Building indie-org version $version...done."
+
+echo "Checking the source distribution for indie-org version $version..."
+make distcheck || exit 1
+echo "Checking the source distribution for indie-org version $version...done."

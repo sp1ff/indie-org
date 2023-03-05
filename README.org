@@ -2,7 +2,7 @@
 #+DESCRIPTION: Org-export on the Indieweb
 #+AUTHOR: Michael
 #+EMAIL: sp1ff@pobox.com
-#+DATE: <2023-03-04 Sat 17:25>
+#+DATE: <2023-03-05 Sun 14:49>
 #+AUTODATE: t
 
 * Introduction
@@ -36,7 +36,27 @@ The build process _does_ make an Emacs package, so you can also do:
   make dist
 #+END_SRC
 
-to produce an Emacs package file (=indie-org-0.4.2.tar=) which you can install with =package-install-file= in your Emacs.
+to produce an Emacs package file (=indie-org-0.4.3.tar=) which you can install with =package-install-file= in your Emacs.
+* Hacking
+
+** Environment Variables
+
+You'll probably want to setup the following environment variables:
+
+    - =EMACS=: set this to the full path to your Emacs executable, if it's not on your =PATH=
+    - =EMACSLOADPATH=: if you've got =indie-org= installed somehwere on your default load path, you'll likely want to set this while developing to ensure that Emacs always picks-up =indie-org= files in your development directories
+    - =PRECOMMIT_EMACSFLAGS=: the pre-commit hook will run =package-lint= in a clean Emacs; =package-lint= which isn't built-in so use this variable to tell Emacs where to find it
+
+The author wraps all this up in a file that he sources into his shell for development work:
+
+#+BEGIN_SRC bash :tangle no :comments no
+  #!/usr/bin/sh
+  export EMACS=/opt/emacsen/current/bin/emacs
+  export PRECOMMIT_EMACSFLAGS="-L ~/.emacs.d/elpa/package-lint-20221003.1636"
+  export EMACSLOADPATH=$HOME/code/projects/indie-org:\
+  $HOME/code/projects/indie-org/test:\
+  /opt/emacsen/current/share/emacs/30.0.50/lisp
+#+END_SRC
 * Status & Roadmap
 
 It's early days, and I've tried to indicate that with the version number (0.x). In order to use it successfully, you're going to need to be familiar with the [[https://orgmode.org/org.html#Exporting][Org Export]] facility and comfortable with [[https://www.gnu.org/software/emacs/manual/html_mono/elisp.html][Emacs Lisp]]. That said, it's not just an experiment: I'm using it today with my personal [[https://www.unwoundstack.com][site]].

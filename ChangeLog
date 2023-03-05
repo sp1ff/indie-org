@@ -1,3 +1,12 @@
+2023-03-05  Michael Herstine  <sp1ff@pobox.com>
+
+	Tidying commit:
+	    1. introduce the project's first Github Action-- on commit,
+	       will test the Autotools-generated tarball
+	    2. setting-up a pre-commit hook
+	    3. fixed a small bug in `indie-org-posse-response-from-plist`
+	       in which :type wasn't being read correctly
+
 2023-03-04  Michael Herstine  <sp1ff@pobox.com>
 
 	Sneaking-in a quick bugfix in the way POSSE responses are serialized
