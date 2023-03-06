@@ -30,22 +30,22 @@ jobs:
     - name: Install tooling
       shell: bash
       run: |
-          pwd
-          set -x
-          sudo apt-get install -y autoconf automake emacs
-          autoconf --version
-          automake --version
-          emacs --version
+        pwd
+        set -x
+        sudo apt-get install -y autoconf automake emacs
+        autoconf --version
+        automake --version
+        emacs --version
     - name: Roll the tarballs
       shell: bash
       run: |
-          set -x
-          ./bootstrap && ./configure
-          make all check distcheck
-          echo "DISTRO_GZ=indie-org-${{ env.RELEASE_VERSION }}.tar.gz" >> $GITHUB_ENV
-          echo "DISTRO_XZ=indie-org-${{ env.RELEASE_VERSION }}.tar.xz" >> $GITHUB_ENV
-          echo "DISTRO_ZSTD=indie-org-${{ env.RELEASE_VERSION }}.tar.zst" >> $GITHUB_ENV
-          echo "DISTRO_PKG=indie-org-${{ env.RELEASE_VERSION }}.tar" >> $GITHUB_ENV
+        set -x
+        ./bootstrap && ./configure
+        make distcheck
+        echo "DISTRO_GZ=indie-org-${{ env.RELEASE_VERSION }}.tar.gz" >> $GITHUB_ENV
+        echo "DISTRO_XZ=indie-org-${{ env.RELEASE_VERSION }}.tar.xz" >> $GITHUB_ENV
+        echo "DISTRO_ZSTD=indie-org-${{ env.RELEASE_VERSION }}.tar.zst" >> $GITHUB_ENV
+        echo "DISTRO_PKG=indie-org-${{ env.RELEASE_VERSION }}.tar" >> $GITHUB_ENV
       - name: Create GitHub release
         id: release
         uses: ncipollo/release-action@v1
