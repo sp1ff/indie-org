@@ -27,18 +27,6 @@ jobs:
       uses: actions/checkout@v2
     - name: Create artifacts directory
       run: mkdir artifacts
-    # - name: Get release download URL
-    #   uses: actions/download-artifact@v1
-    #   with:
-    #     name: artifacts
-    #     path: artifacts
-    - name: Set release upload URL and release version
-      shell: bash
-      run: |
-        # release_upload_url="$(cat artifacts/release-upload-url)"
-        # echo "RELEASE_UPLOAD_URL=$release_upload_url" >> $GITHUB_ENV
-        release_version="$(cat artifacts/release-version)"
-        echo "RELEASE_VERSION=$release_version" >> $GITHUB_ENV
 
   # This job will actually create the artifacts I want to include with the release
   build-artifacts:
