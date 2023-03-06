@@ -83,11 +83,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           allowUpdates: true
-          artifacts:
-            - "${{ env.DISTRO_GZ }}"
-            - "${{ env.DISTRO_XZ }}"
-            - "${{ env.DISTRO_ZSTD }}"
-            - "${{ env.DISTRO_PKG }}"
+          artifacts: ["${{ env.DISTRO_GZ }}", "${{ env.DISTRO_XZ }}", "${{ env.DISTRO_ZSTD }}", "${{ env.DISTRO_PKG }}"]
           draft: true
 
   
