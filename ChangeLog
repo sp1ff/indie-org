@@ -1,11 +1,14 @@
 2023-03-05  Michael Herstine  <sp1ff@pobox.com>
 
+	Correct a bug in `indie-org-posse-response-from-plist`. The `:type` keyword was mis-spelled.
+	Closes issue #6.
+
 	Tidying commit:
 	    1. introduce the project's first Github Action-- on commit,
 	       will test the Autotools-generated tarball
 	    2. setting-up a pre-commit hook
-	    3. fixed a small bug in `indie-org-posse-response-from-plist`
-	       in which :type wasn't being read correctly
+	    3. introduce a workaround for a `parse-time-string` bug
+	       prior to Emacs 28.1
 
 2023-03-04  Michael Herstine  <sp1ff@pobox.com>
 

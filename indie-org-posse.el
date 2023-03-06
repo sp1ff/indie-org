@@ -417,7 +417,7 @@ Return an indie-org-posse-response-v2."
                                       :id (alist-get 'id original)
                                       :text (alist-get 'text original)
                                       :url (alist-get 'url original)
-                                      :type (alist-get 'typd data)))
+                                      :type (alist-get 'type data)))
                          (error "Unrecognized error!"))))
                     (t
                      (message "While sending POSSE request %s :=> %s, got:" source target)

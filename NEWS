@@ -10,6 +10,9 @@ The :type field wasn't being read properly.
 ** Introduced the project's first Github Action
 
 Will run on commits & verify the Autotools tarball.
+** Closed issue #6: `indie-org-posse-response` type being deserialized incorrectly
+
+Fixed a typo on `indie-org-posse-response-from-plist`.
 * 0.4.2 build
 
 Snuck in a quick bugfix regarding POSSE response serialization.
