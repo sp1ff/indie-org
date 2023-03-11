@@ -112,10 +112,11 @@ Targets are represented as lists of target keywords (:twitter, :mastodon, &c)."
 
 (defun indie-org-posse-requests-to-plist (req)
   "Serialize REQ to a property list."
-  (list
-   :hash
-   (indie-org-serde-hash-to-plist
-    (indie-org-posse-requests-hash req))))
+  (if req
+      (list
+       :hash
+       (indie-org-serde-hash-to-plist
+        (indie-org-posse-requests-hash req)))))
 
 (defun indie-org-posse-requests-from-plist (plist)
   "Deserialize PLIST into an `indie-org-posse-requests'."

@@ -48,7 +48,6 @@ Return the resulting list."
 ;;          making mention of other sites (i.e. sending Webmentions)         ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
 (cl-defstruct (indie-org-webmentions-targets
                (:constructor nil)
                (:constructor indie-org-webmentions-make-pub-targets))
@@ -151,12 +150,13 @@ Where:
   (hash (make-hash-table :test 'equal) :type hash-table))
 
 (defun indie-org-webmentions-made-to-plist (made)
-    "Serialize MADE to a property list."
-    (list
-     :hash
-     (indie-org-serde-hash-to-plist
-      (indie-org-webmentions-made-hash made)
-      :serializer #'indie-org-webmentions-targets-to-plist)))
+  "Serialize MADE to a property list."
+  (if made
+      (list
+       :hash
+       (indie-org-serde-hash-to-plist
+        (indie-org-webmentions-made-hash made)
+        :serializer #'indie-org-webmentions-targets-to-plist))))
 
 (defun indie-org-webmentions-made-from-plist (plist)
     "Deserialize PLIST to an `indie-org-webmentions-made' instance."
@@ -393,11 +393,12 @@ for staging, e.g."
 
 (defun indie-org-webmentions-sent-to-plist (sent)
   "Serialize SENT to a property list."
-  (list
-   :hash
-   (indie-org-serde-hash-to-plist
-    (indie-org-webmentions-sent-hash sent)
-    :serializer #'indie-org-webmentions-send-targets-to-plist)))
+  (if sent
+      (list
+       :hash
+       (indie-org-serde-hash-to-plist
+        (indie-org-webmentions-sent-hash sent)
+        :serializer #'indie-org-webmentions-send-targets-to-plist))))
 
 (defun indie-org-webmentions-sent-from-plist (plist)
   "Deserialize PLIST to an `indie-org-webmentions-send-targets'."
