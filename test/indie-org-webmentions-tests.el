@@ -208,6 +208,12 @@
     (advice-remove 'request #'mock-request-call-1)
     (should (indie-org-webmentions-received-last-checked received))
     (should (eq 1410286 (indie-org-webmentions-received-last-id received)))
+    (let ((rcvd (indie-org-webmentions-received-for-page-key received "blog/indieweb-markup.html")))
+      (should (eq 3 (length rcvd)))
+      (should
+       (equal
+        "http://409569222777-useast2-test-webmentions.s3-website.us-east-2.amazonaws.com/sample-1.html"
+        (indie-org-webmentions-received-wm-url (car rcvd)))))
 
     (advice-add 'request :before-while #'mock-request-call-2)
     (indie-org-webmentions-check "www.unwoundstack.com" "token" received)

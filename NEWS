@@ -1,5 +1,10 @@
 indie-org News -- history of user-visible changes                -*- outline -*-
 
+* indie-org 0.5
+
+** 0.5.0 build
+
+*** add the :url field to `indie-org-webmentions-received-wm`
 * indie-org 0.4
 
 * 0.4.3 build

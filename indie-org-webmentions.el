@@ -680,9 +680,9 @@ Returns nil."
                (:constructor
                 indie-org-webmentions-make-received-wm
                 (&key id sort time-received source target author
-                      content private)))
+                      content private url)))
   "Received webmention. CONTENT may be nil."
-  id sort time-received source target author content private)
+  id sort time-received source target author content private (url nil))
 
 (defun indie-org-webmentions-pp-received-wm (wm &optional indent)
   "Pretty-print a received webmention WM at indent level INDENT."
@@ -706,15 +706,22 @@ Returns nil."
 
 (defun indie-org-webmentions-received-wm-to-plist (received-wm)
   "Serialize RECEIVED-WM to a property list."
-  (list
-   :id            (indie-org-webmentions-received-wm-id            received-wm)
-   :sort          (indie-org-webmentions-received-wm-sort          received-wm)
-   :time-received (indie-org-webmentions-received-wm-time-received received-wm)
-   :source        (indie-org-webmentions-received-wm-source        received-wm)
-   :target        (indie-org-webmentions-received-wm-target        received-wm)
-   :author        (indie-org-webmentions-received-wm-author-to-plist (indie-org-webmentions-received-wm-author received-wm))
-   :content       (indie-org-webmentions-received-wm-content-to-plist (indie-org-webmentions-received-wm-content received-wm))
-   :private       (indie-org-webmentions-received-wm-private received-wm)))
+  ;; I kind of cheated by adding :url. It's possible, if `received-wm' was
+  ;; deserialized from an archaic serialization version, that it doesn't
+  ;; have an `url' field.
+  (let ((url
+         (if (> (length received-wm) 9)
+             (indie-org-webmentions-received-wm-url received-wm))))
+    (list
+     :id            (indie-org-webmentions-received-wm-id               received-wm)
+     :sort          (indie-org-webmentions-received-wm-sort             received-wm)
+     :time-received (indie-org-webmentions-received-wm-time-received    received-wm)
+     :source        (indie-org-webmentions-received-wm-source           received-wm)
+     :target        (indie-org-webmentions-received-wm-target           received-wm)
+     :author        (indie-org-webmentions-received-wm-author-to-plist  (indie-org-webmentions-received-wm-author  received-wm))
+     :content       (indie-org-webmentions-received-wm-content-to-plist (indie-org-webmentions-received-wm-content received-wm))
+     :private       (indie-org-webmentions-received-wm-private          received-wm)
+     :url           url)))
 
 (defun indie-org-webmentions-received-wm-from-plist (plist)
   "Deserialize PLIST to an `indie-org-webmentions-received-wm'."
@@ -726,7 +733,8 @@ Returns nil."
    :target        (plist-get plist :target)
    :author        (indie-org-webmentions-received-wm-author-from-plist (plist-get plist :author))
    :content       (indie-org-webmentions-received-wm-content-from-plist (plist-get plist :content))
-   :private       (plist-get plist :private)))
+   :private       (plist-get plist :private)
+   :url           (plist-get plist :url)))
 
 (defun indie-org-webmentions-received-wm-list-to-plist (lzt)
   "Serialize LZT to a list of property lists.
@@ -903,7 +911,8 @@ mentions)."
                       :target target
                       :author author
                       :content content
-                      :private (gethash "wm-private" entry)))
+                      :private (gethash "wm-private" entry)
+                      :url (gethash "url" entry)))
                     (domain-with-authority (concat "https://" domain))
                     ;; throughout this file, "page-key" is described as "any
                     ;; string which uniquely identifies a page"; but _now_ it
