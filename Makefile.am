@@ -10,8 +10,9 @@ dist_lisp_LISP = indie-org-page-key.el    \
 		 indie-org-pkg.el
 EXTRA_DIST = README.org
 CLEANFILES = .pkg-tmp/ indie-org-$(PACKAGE_VERSION).tar
-SUBDIRS = contrib test
+SUBDIRS = contrib doc test
 AM_ELCFLAGS = -L contrib --eval '(require (quote bytecomp))'
+AM_DISTCHECK_DVI_TARGET = html
 
 package: indie-org-$(PACKAGE_VERSION).tar $(srcdir)/README.org
 

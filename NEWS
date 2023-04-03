@@ -2,6 +2,9 @@ indie-org News -- history of user-visible changes                -*- outline -*-
 
 * indie-org 0.5
 
+** 0.5.1 build
+
+*** first draft of the Texinfo manual
 ** 0.5.0 build
 
 *** add the :url field to `indie-org-webmentions-received-wm`

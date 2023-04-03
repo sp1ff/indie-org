@@ -1,0 +1,37 @@
+
+ +-------------------+                                          3. Gimme thing.html; does            +--------------------+
+ | Alice             | <----------------------------------------it provide a webmention ------------ | Bob                |
+ | https://alice.net |                                          endpoint?                            | https://www.bob.me |
+ +-------------------+               4. it does! --+                                                 +--------------------+
+                                                   |
+  1. https://alice.net/think.html                  |                    2. https://www.bob.me/i-saw-a-thing.html
+     +---------------------------------------------|--------------+        +------------------------------------------------+
+     |<head>                                       v              |        |...                                             |
+     |<link rel="webmention" href=https://alice.net/webmention/"/>|        |<body>                                          |
+     |...                                                         |        |Alice made a thing; read about it               |
+     |<body>                                                      |        |<a href="https://alice.net/thing.html">here</a>!|
+     |...                                                         |        +------------------------------------------------+
+     |So I made a thing...                                        |
+     +------------------------------------------------------------+                                         |
+                                                                                                            |
+                      |         ^                                                                           |
+                      |         |                                                                           |
+                      |         +--------- 5. send it ------------------------------------------------------+
+                      |                    POST /webmentions HTTP/1.1
+                      |                    Host: alice.net
+                      |                    ...
+                      |                    src=https://www.bob.me/i-saw-a-thing.html&target=https://alice.net/thing.html
+                      |                                                                                   ^
+                      |               6. gimme i-saw-a-thing.html--                                       |
+                      +----------------- legit? ----------------------------------------------------------+
+
+        +------------------------------------------------------------+
+        |<head>                                                      |
+        |<link rel="webmention" href=https://alice.net/webmention/"/>|
+        |...                                                         |
+        |<body>                                                      |
+        |...                                                         |
+        |So I made a thing...                                        |
+        |...                                                         |
+        | mentioned by: <a href=...html>Bob</a>!                     |
+        +------------------------------------------------------------+

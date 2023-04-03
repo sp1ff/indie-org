@@ -1,0 +1,44 @@
+                                                             org-publish-project-alist
+                                                              +-------+
+                                                              |       |
+                                                              |       |
+                                                              |       |
+                                                              +-------+
+                                                                   ^
+                                         +-----------------+       |
+                                         | org-publish-all |       |
+                                         +-----------------+       |
+                                                  |           +----------------------+
+                                                  +---------> | org-publish-projects |
+                                                              +----------------------+
+                                         +------------------+          |
+                                         | org-publish-file | <--------+
+                                         +------------------+
+                                                  |
+                                        plist, filename, pub-dir
+                 +---------------------------+    |
+                 | :publishing-function      | <--+
+                 +---------------------------+
+                                    |
+                       backend, filename, extension, plist, pub-dir
+       +--------------------+       |
+       | org-publish-org-to | <-----+
+       +--------------------+
+                    |
+              backend, output
+                    |          +--------------------+
+                    +--------> | org-export-to-file |
+                               +--------------------+
+                                          |                             2. transcodes the
+                                       backend                          resulting parse tree
+                                          |             +---------------+
+                                          +-----------> | org-export-as |
+                                                        +---------------+
+                                                               |
+                                   1. calls functions          | 3. ask the template to
+                                   in :filter-parse-tree       | render the final HTML
+                                                               |
+                                                               v
+                                                        +----------------+
+                                   4. finalize          |   template     |
+                                   the page             +----------------+

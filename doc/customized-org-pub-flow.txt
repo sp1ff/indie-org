@@ -1,0 +1,58 @@
+                                                             org-publish-project-alist
+                                                              +-------+
+                                   +------------------------> |       |
+                                   | 1.                       |       |
+                      +--------------+                        |       |
+                      | iosh/publish |                        +-------+
+                      +--------------+                             ^
+                                 | 2.    +-----------------+       |
+                                 +-----> | org-publish-all |       |
+                                         +-----------------+       |
+                                                  |           +----------------------+
+                                                  +---------> | org-publish-projects |
+                                                              +----------------------+
+                                         +------------------+          |
+                                         | org-publish-file | <--------+
+                                         +------------------+
+                                                  |
+                                        plist, filename, pub-dir
+                 +---------------------------+    |
+                 | :publishing-function      | <--+
+                 +---------------------------+
+                                    |
+                       template, filename, extension, plist, pub-dir
+       +--------------------+       |
+       | org-publish-org-to | <-----+
+       +--------------------+
+                    |
+              template, output
+                    |          +--------------------+
+                    +--------> | org-export-to-file |
+                               +--------------------+                                               +--------------------------------------+
+                                          |                         +-  2. transcodes the    -----> | indie-org-webmentions-export-mention |
+                                       template                     |   resulting parse tree        +--------------------------------------+
+                                          |             +---------------+                           +--------------------------------------+
+                                          +-----------> | org-export-as |                           | indie-org-webmentions-export-reply   |
+                                                        +---------------+                           +--------------------------------------+
+                                                          |    |                                    +--------------------------------------+
+                                   1. calls functions     |    | 3. ask the template to             | indie-org-webmentions-export-like    |
+                                   in :filter-parse-tree  |    | render the final HTML              +--------------------------------------+
+                                                          |    |                                    +--------------------------------------+
+                                              +-----------+    v                                    | indie-org-webmentions-export-repost  |
+                                              |         +----------------+                          +--------------------------------------+
+                                   4. finalize|         | iosh/page-html |
+                                   the page   |         +----------------+                                          |
+                                              |                      |                                              |
+                                              |               note POSSE requests                                   |
+                                              |                      |                                              |
+                                              |                      |          plist AKA info                      |
+                                              v                      |          +------+                            |
+                                        +-------------------------+  +--------> |      | <--------------------------+
+                                        | indie-org-finalize-page |             |      |   update indie-org/mentions
+                                        +-------------------------+             +------+
+                                                              |                     ^
+                                                              |                     |
+                                                              +---------------------+
+                                                                read indie-org/mentions,
+                                                                note webmentions to be
+                                                                sent

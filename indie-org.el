@@ -3,7 +3,7 @@
 ;; Copyright (C) 2022-2023 Michael Herstine <sp1ff@pobox.com>
 
 ;; Author: Michael Herstine <sp1ff@pobox.com>
-;; Version: 0.5.0
+;; Version: 0.5.1
 ;; Package-Requires: ((emacs "26.1"))
 ;; Keywords: hypermedia, outlines, wp
 ;; URL: https://www.unwoundstack.com
@@ -37,7 +37,7 @@
 (require 'ox)
 (require 'ox-rss)
 
-(defconst indie-org-version "0.5.0")
+(defconst indie-org-version "0.5.1")
 
 (defgroup indie-org nil
   "Org HTML Export on the Indieweb."

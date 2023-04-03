@@ -1,0 +1,1256 @@
+\input texinfo   @c -*- texinfo -*-
+@c %**start of header
+@setfilename indie-org.info
+@settitle indie-org
+@include version.texi
+@c %**end of header
+
+@dircategory Emacs
+@direntry
+* indie-org: (indie-org). Putting Org mode on the Indieweb.
+@end direntry
+
+@copying
+This manual corresponds to indie-org version @value{VERSION}.
+
+Copyright @copyright{} 2022-2023 Michael Herstine <sp1ff@@pobox.com>
+
+@quotation
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3
+or any later version published by the Free Software Foundation;
+with no Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
+A copy of the license is included in the section entitled ``GNU
+Free Documentation License''.
+
+A copy of the license is also available from the Free Software
+Foundation Web site at @url{https://www.gnu.org/licenses/fdl.html}.
+
+@end quotation
+
+This document was typeset with
+@uref{http://www.texinfo.org/, GNU Texinfo}.
+
+@end copying
+
+@c title & copyright-- won't appear in online output.
+@titlepage
+@title indie-org
+@subtitle Putting Org mode on the Indieweb
+@author @email{sp1ff@@pobox.com}
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+@end titlepage
+
+@c Output the table of the contents at the beginning.
+@contents
+
+@c ``top'' node-- this is the start of the online output, but doesn't
+@c appear in the printed manual
+@ifnottex
+@node Top
+@top indie-org
+
+Putting Org mode on the Indieweb.
+
+This manual corresponds to indie-org version @value{VERSION}.
+
+This manual is work in progress.
+
+@c Generate the nodes for this menu with `C-c C-u C-m'.
+@menu
+* Introduction::
+* Background::
+* Building a Static Site on Org Mode & indie-org::
+* Adding Indieweb Support::
+* Future & Roadmap::
+* Index::
+* Function Index::
+* Type Index::
+* Variable Index::
+@end menu
+
+@c If I don't include the menu in the ifnottex block, texinfo
+@c complains when I generate pdf...
+@end ifnottex
+
+@node Introduction
+@chapter Introduction
+
+Many of us maintain personal websites using
+@url{https://orgmode.org/org.html, Org Mode}. An Org-generated static
+site has advantages over full-blown Content Management Systems:
+authoring pages in Org, working in Emacs Lisp, unparalleled control &
+customizability over the process, and the simplicity of not having to
+leave your Emacs environment to name a few.
+
+However, that simplicity comes with costs such as fewer features; such
+a site will not be able to handle commenting or support user login,
+for instance. Furthermore, in an age of social media, an independent
+site can come to feel isolated altogether, existing outside the
+conversations taking place on sites like Twitter & Mastodon.
+
+Enter the @url{https://indieweb.org/, Indieweb}: ``The IndieWeb is a
+community of independent & personal websites connected by simple
+standards, based on the principles of: owning your domain & using it
+as your primary identity, publishing on your own site (optionally
+syndicating elsewhere), and owning your data.''
+
+The Indieweb (@xref{The Indieweb}) offers protocols, idioms & services
+for connecting your site to those of others, and even to other
+ecosystems such as Twitter & Mastodon (``silos'' in the Indieweb's
+parlance).
+
+@code{indie-org} is an Emacs package for integrating an Org-generated,
+static site with the Indieweb. This manual describes @code{indie-org}
+for the interested site author.  Throughout, itwill reference a simple
+static site, @url{https://indie-org.sh,indie-org.sh}. It is live on
+the web, and its source is available at
+@url{https://github.com/sp1ff/indie-org.sh,Github}. The reader may
+wish to refer to the source while reading this manual.
+
+@node Background
+@chapter Background
+
+@c Generate the nodes for this menu with `C-c C-u C-m'.
+@menu
+* The Indieweb::
+* Org Mode::
+* The Limitations of Org Mode and Where indie-org Comes In::
+@end menu
+
+@node The Indieweb
+@section The Indieweb
+
+Per @url{https://indieweb.org/, indieweb.org}: ``the Indieweb is a
+collection of protocols for connecting to other independent sites,
+pushing your content to social media sites, collecting likes, comments
+& responses from other sites _back_ to yours, and many other things as
+well.''
+
+Many of the @url{https://indieweb.org/principles, Indieweb principles}
+would likely appeal to the Emacs Org Mode user, and the Org Mode
+static site owner in particular:
+
+@enumerate
+
+@item
+Own your data; your content, your metadata & your identity.
+
+The Org Mode static site owner has already taken a large step in this
+direction.
+
+@item
+Make what you need & use what you make
+
+Nothing more need be said.
+
+@item
+Document your stuff
+
+This manual is a step in that direction on the author's part.
+@end enumerate
+
+This section covers a few aspects of the Indieweb that are pertinent
+to @code{indie-org}.
+@c Generate the nodes for this menu with `C-c C-u C-m'.
+@menu
+* Microformats::
+* IndieAuth::
+* Webmentions::
+* POSSE::
+@end menu
+
+@cindex microformats
+@cindex microformats, overview
+@node Microformats
+@subsection Microformats
+
+@url{http://microformats.org/, Microformats} are a fundamental
+building block of the Indieweb. ``Designed for humans first and
+machines second, microformats are a set of simple, open data formats
+built upon existing and widely adopted standards''. They are a set of
+tags which one may add to one's HTML to indicate @emph{semantic} rather
+than @emph{formatting} information. For instance,
+@url{https://waterpigs.co.uk/articles/getting-started-with-microformats2/,
+consider} mentioning a person in your prose. In plain text, one could
+say:
+
+@example
+Barnaby Walters
+@end example
+
+and in HTML, to indicate a location on the internet, one could say:
+
+@example
+<a href="http://waterpigs.co.uk">Barnaby Walters</a>
+@end example
+
+Microformats2 adds additional information to that link, the
+information that this names a person, by adding a particular class to
+the HTML element:
+
+@example
+<a class="h-card" href="http://waterpigs.co.uk">Barnaby Walters</a>
+@end example
+
+Microformats allow you to build structure, for instance giving this
+reference to a person both a location on the web and a photo:
+
+@example
+<div class="h-card">
+    <p><img class="u-photo" href="/me.png" alt="" /></p>
+    <p class="p-name"><a href="u-url" href="http://waterpigs.co.uk">Barnaby Walters</a></p>
+</div>
+@end example
+
+You can find a complete vocabulary
+@url{http://microformats.org/wiki/microformats2#v2_vocabularies,
+here}, and an on-line Microformats parser @url{https://pin13.net/mf2/,
+here}.
+
+Of particular note is that, as static site authors, the onus is on
+@emph{us} to mark-up our HTML with microformts. We'll use the page
+template in the Org Export back-end to do so (@pxref{Where & How to
+Author Microformats, below, below}).
+
+The Microformats Wiki is
+@url{https://microformats.org/wiki/microformats2, here} and
+@url{https://pypi.org/project/mf2py/, mf2py} is a commonly used Python
+library for parsing Microformats.
+
+@cindex IndieAuth
+@cindex Own your identity, authentication
+@node IndieAuth
+@subsection IndieAuth
+
+In a world in which everyone owns their own identity, how shall we
+authenticate one another?  @url{https://oauth.net/, OAuth 2.0} has
+become increasingly common, but suffers from a few shortcomings that
+make it unsuitable for use on the Indieweb.
+
+In the first place, the protocol requires an app to register with the
+authorization server to be used (see the
+@url{https://www.rfc-editor.org/rfc/rfc6749, RFC}, section 2). This
+makes sense when, say, building a Facebook app, or a Twitter app, but
+breaks-down in a world in which everyone is their own authorizing
+authority.
+
+The second issue is simply that OAuth 2.0 is not an authentication
+protocol-- it is a protocol designed to @emph{authorize}
+@emph{applications} to access resources on a principal's behalf. Without
+augmenting the protocol in some way, the app will have no information
+that can identify the user on their app-- just a grant of permissions
+to carry out certain operations on the resource provider.
+
+This led Aaron Parecki and others to develop a related protocol--
+@url{https://indieauth.spec.indieweb.org/, IndieAuth}.  Here, your
+identity is your domain name. When you wish to authenticate with a
+site, you no longer pick one of a few silos (``sign-in with Google'',
+``sign-in with Facebook'', and so forth), but instead provide your
+domain name. The site will fetch your page (or, at least, its head) to
+discover your IndieAuth provider endpoints.
+
+From there, the flow largely proceeds in the same manner as OAuth with
+the additional bit that the authorization endpoint will provide not
+only a token, but a canonical URL identifying the user.  The full
+authorization flow is described
+@url{https://indieauth.spec.indieweb.org/#authorization, here}.
+
+This is an important step forward, but making everyone on the Indieweb
+responsible for implementating an authentication server would not be
+very practical.  Fortunately, there are multiple standalone
+implementations available, beginning with @url{https://indieauth.com/,
+IndieAuth.com}. This is an IndieAuth authentication implementation
+that will allow one to authenticate using either one's existing social
+media accounts or PGP keypair, even (or, perhaps, especially) when
+using a static site.
+
+In order to integrate with IndieAuth.com, the site author needs to add
+a link to each account to the home page with the attribute
+@code{rel="me"}, and ensure that those accounts list your home page in
+their profiles:
+
+@example
+<ul>
+  <li>
+    <a href="https://twitter.com/jdoe" rel="me">Twitter</a>
+  </li>
+  <li>
+    <a href="https://github.com/jdoe" rel="me">Github</a>
+  </li>
+  ...
+</ul>
+@end example
+
+This manual will cover the details for a sample site @xref{Supporting
+IndieAuth, below, below}.
+
+@cindex Webmentions
+@cindex Webmentions, background
+@node Webmentions
+@subsection Webmentions
+
+@url{https://indieweb.org/Webmention, Webmention} is an open
+@url{https://www.w3.org/TR/webmention/, standard} for distributed
+interactions among independent web sites.
+
+@image{webmentions-general}
+
+Suppose Alice posts to her site. The content is presumably HTML, but
+could be something else (plain/text, say). Bob now wants to mention
+that content on his site. He makes a post (the source) that contains
+the URL of Alice's post (the target).  Again, the source is presumably
+an HTML document, but may be anything that can express an URL.
+
+Bob, or more likely his publishing software, must now discover Alice's
+Webmention endpoint. He does this by fetching Alice's document via
+HTTP-- if it has a @code{Link} header with a rel value of
+``webmention'' that's Alice's webmention endpoint (this is how sending
+webmentions of non-HTML documents is supported). If there is no such
+header, and the document is HTML, Bob must look through the document
+itself for @code{<link>} or @code{<a>} elements with rel values of
+``webmention''-- the first one in the document is Alice's Webmention
+endpoint.
+
+Bob then posts @code{x-www-form-urlencoded} source & target parameters
+to Alice's Webmention endpoint (the target parameter being Alice's
+post and the source being Bob's mention thereof). Alice's Webmention
+endpoint will typically do some initial validation of the request, and
+on success return either ``201 Created'' or ``202 Accepted'' to
+indicate that further processing will take place asynchronously (in
+the former case, the @code{Location} header in the response will
+include an URL at which the request processing status may be checked).
+
+Asynchronously, Alice verifies the Webmention by issuing an HTTP
+@code{GET} on the source and verify that the source document contains
+an exact match for the URL given in the target parameter of the
+Webmention.
+
+At this point, Alice may choose to publish content from Bob's mention
+along with any other data it obtained (e.g. ``Bob liked...'').
+
+You can see an example of this in action (in conjunction with
+@pxref{POSSE})
+@url{https://www.unwoundstack.com/blog/documentation.html, here}.
+
+@node POSSE
+@subsection POSSE
+
+``POSSE'' stands for Publish on your Own Site, Syndicate Elsewhere''
+(or Everywhere). POSSE is less a formal protocol (like
+@pxref{Webmentions}) than a feature you may want to build into your
+site.
+
+The idea is that, after posting to one's site, one then pushes copies
+of, or links to, that new post to assorted third-party sites (Twitter,
+for instance). This allows readers who prefer those sites to remain
+aware of your activity without leaving their prefered experience. This
+feature can be extended to collect responses to the POSSE'd content
+within the third-party sites (likes, replies and so forth) and feed
+that @emph{back} to your site: a list of Tweets and/or Toots that have
+replied to you underneath your original post, for instance.
+
+You can see an example of this in action (in conjunction with
+@pxref{Webmentions})
+@url{https://www.unwoundstack.com/blog/documentation.html, here}.
+
+It stems from the Indieweb principle of owning your data rather than
+trusting it to a third-party site that may go away or simply decide to
+deny you access to your own content. It also stems from the hard fact
+that many of our friends & colleagues are still on such third-party
+sites such as Twitter or Mastodon: this is a way to connect your
+content thereto.
+
+Implementations are generally bespoke; @code{indie-org} supports this
+for the site author via @url{https://brid.gy, brid.gy} (see
+@pxref{Supporting POSSE}).
+
+@cindex Org Mode, background
+@node Org Mode
+@section OrgMode
+
+This manual assumes that the reader is generally familiar with Org
+mode. If they are not, the @url{https://orgmode.org/org.html, Org
+Manual}, @url{https://orgmode.org/features.html, site} and
+@url{https://orgmode.org/worg/, Worg} are excellent resources for
+getting started.
+
+This section will instead concern itself with deeper explanations of a
+few aspects of Org mode of particular interest to @code{indie-org}:
+the Org export process and the question of standardizing Org syntax
+and its implications for static site generation based on Org mode
+documents.
+
+@c Generate the nodes for this menu with `C-c C-u C-m'.
+@menu
+* The Export Process::
+* Can Org Mode Documents Exist Outside of Emacs?::
+@end menu
+
+@cindex Org Export process
+@node The Export Process
+@subsection The Export Process
+
+This subsection outlines the generic Org Export process with an eye
+toward customizing it for our purposes. While we defer the
+fully-customized implementation to @xref{Customizing the Publication
+Process}, it is here that we introduce @url{https://indie-org.sh,
+indie-org.sh}, a live example of an Org-generated static site built on
+top of @code{indie-org}.
+
+The Org Export publication process, in broad terms, looks like this:
+
+@image{generic-org-pub-flow}
+
+The main entrypoint to the Org Export facility is @xref{Triggering
+Publication, org-publish-all, org-publish-all, org}.
+@findex
+@code{org-publish-all} refers to the variable @xref{Project alist,
+org-publish-project-alist, org-publish-project-alist, org}, which
+describes our publication ``project'' to Org Mode. For each project
+(the root project can have sub-projects), Org Export will iterate over
+each file, copying it to its configured destination and, in general,
+transforming the contents in some way.
+
+Of particular note is the @code{info}, or @code{plist} argument which
+is initialized at the beginning of the process of publishing each
+project (in @code{org-publish-file}) and is passed down through the
+entire call stack. It begins as the project plist (i.e.  the project
+entry in @code{org-publish-project-alist}) and is augmented at each
+step. It is a property list that the different pieces of the
+publication pipeline use to communicate, and @code{indie-org} will use
+it as well.
+
+The process of transforming the Org Mode document to another format is
+governed by the @code{:publishing-function} attribute for each
+project. It is invoked with the input filename, the publication
+directory, and the project plist.
+
+@code{indie-org.sh} has two sub-projects salient to this discussion:
+``pages'' and ``posts''. The former contains a few top-level pages
+(home, about & so forth) whereas the latter contains all the site
+posts. Each employs a lambda as its @code{publishing-function}; the
+lambdas simply provide one more argument to the true publishing
+implementation, @code{iosh/publish-page}. The additional argument is
+the Org Export
+@xref{Adding Export Back-ends, Back-end, Back-end, org, Adding Export Back-ends}
+to use.
+
+@code{iosh/publish-page} passes that back-end on
+@code{org-publish-org-to} and thence to @code{org-export-to-file} and
+@code{org-export-as}, which is where the real work begins. The
+function has a lot of functionality packed into its 171 lines; of note
+to us, it will:
+
+@enumerate
+
+@item
+Parse the buffer being exported into Org elements (see
+@xref{Org Syntax, Org Syntax, org, Org Syntax, Org Syntax})
+
+@item
+Give the export backend the opportunity to filter the resulting parse
+tree; we're not doing that so far in this example, but will take
+advantage of this below.
+
+@item
+Transcodes the resulting parse tree to HTML
+
+@item
+Extract the template from the backend & ask it to produce an HTML
+document from that HTML
+
+@item
+Offers the backend the opportunity to ``finalize'' the resulting page;
+that is, to run arbitrary code after the HTML document has been
+produced.
+
+@end enumerate
+
+We introduce an Emacs Lisp file, @code{indie-org.sh.el} to the project
+where we can setup this boilerplate & invoke @code{org-publish-all}:
+
+@lisp
+(defun iosh/publish (prod)
+  "Publish indie-org.sh to production if PROD is non-nil, locally else."
+  ;; Define a derived backend to insert our template:
+  (org-export-define-derived-backend
+      'iosh/page-html
+      'html
+      :translate-alist '((template . iosh/page-html)))
+  (org-export-define-derived-backend
+      'iosh/post-html
+      'html
+      :translate-alist '((template . iosh/post-html)))
+  ;; ...
+  (let* ((publishing-root (concat (file-name-as-directory project-dir) "www"))
+         (org-publish-project-alist
+          `(("indie-org.sh" :components ("pages"))
+            ("pages"
+             :base-directory             ,(concat project-dir "pages")
+             :publishing-directory       ,(concat project-dir "www")
+             :publishing-function        ,(list
+                                           (lambda (plist filename pub-dir)
+                                             (iosh/publish-page plist filename pub-dir 'iosh/page-html)))
+             :html-doctype               "html4-strict"
+             ...
+             )
+            ("posts"
+             :base-directory             ,(concat project-dir "posts")
+             :publishing-directory       ,(concat project-dir "www/posts")
+             :publishing-function        ,(list
+                                           (lambda (plist filename pub-dir)
+                                             (iosh/publish-page plist filename pub-dir 'iosh/post-html)))
+             :html-doctype               "html4-strict"
+             ...
+             ))))
+      (org-publish-all t)
+      ;; ...
+      ))
+@end lisp
+
+@cindex Parsing Org Mode
+@cindex Orgdown
+@node Can Org Mode Documents Exist Outside of Emacs?
+@subsection Can Org Mode Documents Exist Outside of Emacs?
+
+It has been suggested to the author that he has built far too much
+functionality in Emacs Lisp, and that if one is interested in putting
+a staticly generated site on the Indieweb, it is better implemented as
+a purpose-built program written in a general-purpose programming
+language.
+
+Perhaps. However, if one is committed to writing in Org Mode, that
+avenue of attack on the problem leads us to an interesting question:
+how can we parse Org Mode files outside of Emacs?
+
+Today, the reference implementation of an Org Mode parser is... Emacs
+Org Mode. The syntax is documented
+@url{https://orgmode.org/worg/org-syntax.html, here} and the
+implementation, in @code{org-element.el} is unusually readable, but it
+all exists within Emacs.
+
+There are (numerous) parsers available, in a wide variety of
+languages, with various levels of fidelity to Org Mode claimed. There
+is an effort ongoing at the time of this writing on the emacs-orgmode
+list to standardize a set of test cases to make compliance more
+rigorous. Karl Voit independently gave a
+@url{https://emacsconf.org/2021/talks/org-outside/, talk} at
+@url{https://emacsconf.org/2021/, EmacsConf 2021} proposing a
+specification which he called ``Orgdown''.
+
+So it may be that in the not too distant future, we will have Org Mode
+parsers in general-purpose languages which can be validated against
+some sort of specification, or at least a well-known test
+suite. However, and this has been discussed at length on the
+emacs-orgmode list, such a parser will either need to re-implement
+much of Emacs or be incomplete: how should such a parser handle Babel,
+for instance? Table formulas that invoke arbitrary Emacs Lisp
+functions? The author uses a custom Org Mode property,
+@code{#+AUTODATE} in his documents; if set to @code{t}, the
+@code{#+DATE} property will be updated every time the buffer is
+saved-- how should that be handled?
+
+Some argue that such a specification could only cover the ``static''
+portions of an Org Mode document, but it's not clear to the author
+exactly how that would work in the case of the ``dynamic'' portions
+@emph{generating} document content.
+
+The answer is not clear to me at this time. However, having
+implemented the functionaly to support putting my own sites on the
+Indieweb, it seemed reasonable to make that functionality available to
+others.
+
+@cindex Limitations, Org Mode & static sites
+@node The Limitations of Org Mode and Where indie-org Comes In
+@section The Limitations of Org Mode and Where indie-org Comes In
+
+We've seen that Org Mode is a flexible and extensible way to publish
+HTML from within Emacs. There are numerous ways in which one could
+push the resulting HTML to a server and thereby serve a static
+website. That said, a static site can be... limiting.
+
+It is a way of broadcasting content to a passive audience, but no
+more. It provides no way for readers to respond to the
+content. Commenting as a service is available (from Disqus, for
+example), but in the first place such services always feel grafted-on
+to the host site, and in the second, if you're going to the trouble to
+host your own site, are you really comfortable offloading the
+resulting conversations to a third party?
+
+Additionally, although consumers are becoming increasingly chary of
+entrusting their online identities (and data) to sites like Twitter,
+the reality is that a great deal of public coversation continues to
+take place there (and on Facebook, Reddit, &c). A self-hosted, static
+web site offers no connection to such fora.
+
+@node Building a Static Site on Org Mode & indie-org
+@chapter Building a Static Site on Org Mode & indie-org
+
+The @url{https://indie-org.sh, indie-org.sh} project was introduced in
+@xref{The Export Process}. This chapter will flesh-out the
+implementation details, including authoring Microformats. The next
+chapter, @xref{Adding Indieweb Support}, will cover truly adding the
+site to the Indieweb by adding things like Indieauth, Webmentions &
+POSSE support.
+
+@c Generate the nodes for this menu with `C-c C-u C-m'.
+@menu
+* The Project Structure::
+* Customizing the Publication Process::
+* Where & How to Author Microformats::
+* Now We Have a Static Web Site::
+@end menu
+
+@cindex Project structure
+@node The Project Structure
+@section The Project Structure
+
+The site itself is structured with a single top-level page and a
+series of posts beneath that (in the @code{posts} directory). It is
+hosted in an AWS S3 bucket fronted by Cloud Front.
+
+The source for each page or post is an Org document.  The top-level
+page sources can be found in @code{pages} and that for posts in
+@code{posts}. The Org documents are published to HTML via @ref{HTML
+Export, HTML export, HTML export, org} into a directory named
+@code{www}.
+
+The publication process is run by invoking Emacs, telling it to load
+the file @code{lisp/indie-org.sh.el}, and telling it to invoke the
+function @code{iosh/publish} therein:
+
+@example
+emacs --batch -l lisp/indie-org.sh.el --eval '(iosh/publish)'
+@end example
+
+When publishing to the live site, the @code{www} directory is simply
+copied to the S3 bucket using the @command{aws} CLI.
+
+Since it is tedious to type these commands over & over, a Gnu
+@code{Makefile} is provided: building the site locally is
+@command{make} and publishing it is @command{make prod}.
+
+The remainder of this chapter is a guided tour of the code intended to
+leave the reader in a position to put their own Org-generated static
+site on the Indieweb. Much of the work has been encapsulated in the
+indie-org Emacs package, but there is still a fair amount of per-site
+customization required.
+
+@node Customizing the Publication Process
+@section Customizing the Publication Process
+
+We customize @xref{The Export Process} in order to produce
+microformats in our generated HTML and to send Webmentions & POSSE
+requests:
+
+@image{customized-org-pub-flow}
+
+This section will broadly sketch the customizations; subsequent
+sections will detail implementing each aspect.
+
+In order to emit @xref{Microformats}, we're going to need to get our
+fingers into the process of transcoding Org Mode to HTML; this entails
+defining our own backend(s) and setting the
+@code{:publishing-function} for each project (see @pxref{Where & How
+to Author Microformats}).
+
+In order to support IndieAuth, we'll need to generate a PGP keypair
+and/or setup accounts with one or more social media sites (see
+@pxref{Supporting IndieAuth}).
+
+In order to note webmentions made on each post, we'll need to define
+new link types, so that we can indicate that we'd like to mention
+another post by authoring Org Mode such as:
+
+@example
+as you can see [[mention:https://cool-site.org/cool-post.html][here]]...
+@end example
+
+In the export function for such link types, we'll note the webmentions
+in the page's informational property list; then, in the project
+@code{:final-output} filter we can extract all of that page's mentions
+and add them to the site's list (see @pxref{Supporting Webmentions}.
+
+POSSE is handled in the page template-- since at this point the
+Org Mode document has been parsed, we can simply access them as
+properties and add them to the site's list of POSSE requests.
+
+In the foregoing, we've mentioned site-wide lists of webmentions made
+& POSSE requests. These lists reside in
+@tindex indie-org-state-v2
+@tindex indie-org-state.
+indie-org-state-v2. See @xref{Publication Environments & State} for
+details.
+
+@cindex Microformats
+@cindex Microformats, where to author
+@node Where & How to Author Microformats
+@section Where & How to Author Microformats
+
+When one ``publishes'' an Org Export project, each file in the project
+is copied to the destination directory and perhaps transformed in the
+process (@pxref{Publishing action, Publishing, Publishing, org, Org
+Mode, OrgMode}) The publication operation is determined by the
+project's @code{:publishing-function} configuration item, which
+defaults to @code{org-html-publish-to-html}. This function, in turn,
+invokes @code{org-publish-org-to} with the @code{html} back-end.
+
+The details of the Org Export process are determined by the selected
+back-end (@pxref{Exporting, Exporting, Exporting, org, Org Mode, Org
+Mode}). Of particular interest is the @code{template} member of each
+back-end's @code{translate-alist} attribute-- this shall be a lisp
+form that receives the abstract syntax tree for each Org Mode document
+published and is responsible for returning the text to be written to
+the output file (HTML, in our case)-- @emph{this} is where we emit our
+microformats.
+
+This leaves us with a quandry: how shall we support different post
+types? One option would be to implement it in the template function:
+have the template extract the post-type document property, figure-out
+what sort of post we're publishing, and emit the corresponding HTML.
+
+Alternatively, we could implement it in the publication function--
+that is, have a different back-end for each post type. This is less
+convenient because you need to know the post type @emph{before} the
+file is parsed (that is, all you've got at publication time is a
+filename).
+
+So, let us define two Org Export projects, one for top-level pages on
+our site (home, about & so forth) and one for posts. The latter shall
+eventually support different post types.
+
+@node Now We Have a Static Web Site
+@section Now We Have a Static Web Site
+
+At this point, we have a web site which, while static, is already
+marked-up with Microformats. We can publish locally by saying
+@command{make} and to the web by saying @command{make prod}. In the
+next chapter, we'll add assorted IndieWeb features to it.
+
+@cindex Indieweb
+@cindex Indieweb, adding support
+@node Adding Indieweb Support
+@chapter Adding Indieweb Support
+
+@c Generate the nodes for this menu with `C-c C-u C-m'.
+@menu
+* Page Keys::
+* Publication Environments & State::
+* Supporting IndieAuth::
+* Supporting Webmentions::
+* Supporting POSSE::
+* Adding RSS & h-feeds::
+* Introducing the Notion of Post Type to Your Workflow::
+@end menu
+
+@node Page Keys
+@section Page Keys
+
+Throughout @code{indie-org}, we need a way to "name" pages on the
+site.  For the most part, @code{indie-org} requires a page-key to
+simply be a string that uniquely identifies each page on the site.
+There are a few instances, however, in which we need a bit more
+structure:
+
+@enumerate
+
+@item
+It must be possible to map an URL naming the page back to a page-key
+(when retrieving Webmentions)
+
+@item
+At page publication time, we need to know the page key corresponding
+to the page being published is/will be (for recording Webmentions to
+be sent)
+
+@end enumerate
+
+It would be possible to make this parameterizable by, say, providing
+customizable variables holding functions for performing these two
+operations.  As a first implementation, however, @code{indie-org}
+simply defines "page key" in the obivous way: as the page's path in a
+URL naming it on the site (i.e. if the page lives at
+``https://foo.net/a/b/c.html'' on your site, its page-key shall be
+``a/b/c.html'').
+
+@node Publication Environments & State
+@section Publication Environments & State
+
+Supporting various Indieweb features such as Webmentions & POSSE
+requires maintaining state regarding site publication.  For instance,
+every time one publishes the site (whether to a local test server or
+to the live site) one now needs to scribble down new Webmentions that
+need to be sent for subsequent use.  Incoming webmentions also need to
+be recorded upon receipt for potential use in subsequent publications.
+
+@command{indie-org} implicitly defines the idea of ``publication
+environment'' to represent the various places to which one may wish to
+publish.  This is implicit because they are named by arbitrary symbols
+chosen by the site author. For instance, one may choose to examine one's
+site after simply publishing HTML to the local filesystem in a browswer
+with a ``file:'' URL, and name this publication environment @code{:local}.
+
+Perhaps one has an Apache instance running locally for testing
+purposes: that could be named @code{:staging}. The only assumption
+made by @code{indie-org} is that the default site is named
+@code{:prod}.
+
+@code{indie-org} associates each production environment with an
+instance of the struct
+@tindex indie-org-state
+@tindex indie-org-state-v2
+@code{indie-org-state-v2}.
+
+The struct contains the fields:
+
+@enumerate
+
+@item
+last-published: the last time the site was published to this environment
+
+@item
+webmentions-made: a mapping from page-key to a list of Webmentions
+made by that page
+
+@item
+webmentions-sent: a mapping from page-key to a list of all Webmentions
+sent to-date by that page
+
+@item
+webmentions-received: a mapping from page-key to a list of all
+Webmentions @emph{received} by that page
+
+@item
+posse-requests: a mapping from page-key to a list of POSSE requests
+for that page (i.e. an expressed desire for the post to be POSSE'd to
+Twitter, or Mastodon, or wherever)
+
+@item
+posse-responses: a mapping from page-key to a list of POSSE responses
+for that page (i.e. a record of a completed POSSE request for the page
+to various siloes).
+
+@end enumerate
+
+While it is up to the site author to incorporate state into their
+publication process, @code{indie-org} provides basic utilities for
+doing so.
+
+Use
+@findex indie-org-make-publication-state
+@code{indie-org-make-publication-state} to create a new
+@code{indie-org-state-v2} instance,
+@findex indie-org-state-write
+@code{indie-org-state-write} to write a property list mapping
+publication environment to state to file, and
+@findex indie-org-state-read
+@code{indie-org-state-read} to read it back out.
+
+A site's publication function might then look something like this:
+
+@lisp
+(defun my/publish (prod)
+  "Publish my site to production if PROD is non-nil, locally else."
+  (indie-org-enable)
+  (let* ((env (if prod :prod :local))
+         (pub-states
+          (if (file-exists-p publication-state-file)
+           (indie-org-state-read publication-state-file)
+         `(:prod ,(indie-org-state-make) :local ,(indie-org-state-make))))
+         (publication-state (plist-get pub-states env)))
+    ;; Setup the call to `org-publish-all'.
+    (let* (...)
+      (org-publish-all t)
+      ;; Update state
+      ...
+      (plist-put pub-states env publication-state)
+      ;; and write it all out to disk.
+      (indie-org-state-write pub-states ".state"))))
+@end lisp
+
+@cindex IndieAuth
+@node Supporting IndieAuth
+@section Supporting IndieAuth
+
+Adding @xref{IndieAuth} support to one's site requires no coding. This section
+will instead sketch the steps necessary to support IndieAuth to the extent
+necessary for adding additional IndieWeb features.
+
+@c Generate the nodes for this menu with `C-c C-u C-m'.
+@menu
+* Using PGP::
+* Using Social Media Sites::
+@end menu
+
+@node Using PGP
+@subsection Using PGP
+
+You'll need to generate a PGP keypair to identify your site, if you
+don't already have a keypair you'd like to use. To generate a new
+keypair, say @command{gpg --gen-key} and follow the prompts. Think
+ahead of time about the e-mail you'd like to associate with the new
+keypair.
+
+Once you've got your keypair, you can get its identifier by saying
+@command{gpg --list-keys} (the identifier is the long hexadecimal
+string listed for each public key on your keyring). Say @command{gpg
+--output PATH-TO-YOUR-SOURCE/site-public.pgp --export KEYID} to put a
+copy of your site's public key somewhere in your site's source project
+directory.
+
+Add a link to your home page like:
+
+@example
+<link rel="pgpkey" href="/site-public.pgp>
+@end example
+
+To test, go to @url{https://indieauth.com} and scroll down to the
+``Try It!'' section.
+
+Note that IndieAuth.com supports neither Twitter nor Mastodon for
+authentication purposes.
+
+You should see a green button labelled ``GPG''
+along with your domain & the name of your public key. Click that and
+you'll be presented with a string to sign with your private key
+(demonstrating ownership of the private key). Copy the challenge text
+and say @command{echo 'CHALLENGE-TEXT'|gpg -u KEYID --clearsign --armor}. This
+should produce output something like:
+
+@example
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
+
+eyJ0eXAiOiJKV1Qi...
+-----BEGIN PGP SIGNATURE-----
+
+iQGzBAEBCAAdFiEEr2ZwJM99NLbLOVkMca2Hl/Lwd1cFAmQqHdQACgkQca2Hl/Lw
+d1e1jwv/bpIrpr7+WNfD1xfiNzkq+PzbeeMT07B8kHo3ZKXJINB420jO3P+QqM8G
+S1WQF2XyhnzxKmo/ySk54HOV5iWZ62uBHIrn/Nn6YUBvVQUB6CiF0zeCvKrbreW/
+3omdbdLfCryPAMd120sQi8mQ5fDr798jq8Oq7QyIA4WusIh3ZesoDYboE4VJKryK
+...
+-----END PGP SIGNATURE-----
+@end example
+
+Paste the @emph{entire} messages into the box.
+
+@node Using Social Media Sites
+@subsection Using Social Media Sites
+
+While @url{https://indieauth.com, IndieAuth} does not support login
+via other sites, such as Twitter or Mastodon,
+@url{https://indielogin.com/, IndieLogin} does, and the services we're
+going to be using use the latter, not the former.
+
+In order to do this, the site author must mark-up their home page with
+links to their social media profiles with the @code{rel="me"}
+attribute, e.g.:
+
+@example
+<link href="https://twiiter.com/jdoe" rel="me">
+@end example
+
+On each service listed, ensure there's a link back to the site's home
+page.
+
+Supported services:
+
+@enumerate
+
+@item
+Twitter
+
+@item
+Mastodon
+
+@item
+Github
+
+@item
+PGP key
+@end enumerate
+
+@node Supporting Webmentions
+@section Supporting Webmentions
+
+This section will lay-out the process of adding @xref{Webmentions}
+support to the static site.
+
+@c Generate the nodes for this menu with `C-c C-u C-m'.
+@menu
+* Making & Recording Webmentions::
+* Sending Webmentions::
+* Receiving Webmentions::
+@end menu
+
+@node Making & Recording Webmentions
+@subsection Making & Recording Webmentions
+
+The first step in making a Webmention is to express that intent in our
+Org Mode source files. @code{indie-org} implements this by
+@xref{Adding Hyperlink Types, Adding Hyperlink Types, Adding Hyperlink
+Types, org, Adding Hyperlink Types, Adding Hyperlink Types}.
+
+When the site author invokes
+@findex indie-org-webmentions-enable
+@code{indie-org-webmentions-enable} four new link types will be
+defined:
+
+@enumerate
+
+@item
+mention
+
+@item
+reply
+
+@item
+like
+
+@item
+repost
+
+@end enumerate
+
+Each link type has a few properties, in particular @code{:follow} and
+@code{:export}. @code{indie-org}'s link types all implement follow in
+the same way as standard HTML links; it's the export aspect in which
+they differ. While they will all render as standard HTML, they will
+take the opportunity to @emph{note} each of them via
+@findex indie-org-webmentions-record-webmention
+@code{indie-org-webmentions-record-webmention}
+
+The site author shall include their publication state's
+@tindex indie-org-webmentions-made
+@code{indie-org-webmentions-made} (@pxref{Publication Environments &
+State}) in the project properties (under the name
+@code{:indie-org/webmentions-made}); at export time, the custom link
+types will, first, produce @xref{Microformats} appropriate to the sort
+of webmention being made, then invoke
+@code{indie-org-webmentions-record-webmention} to record them in the
+current publication environment's state.
+
+@node Sending Webmentions
+@subsection Sending Webmentions
+
+At this point, assuming the site author has @xref{Making & Recording
+Webmentions, made & recorded, made & recorded} one or more
+Webmentions, they presumably want to send them.
+
+Despite the protocol's simplicity, sending Webmentions is a
+non-trivial task. The sender needs to carry-out Webmention endpoint
+discovery on their targets (which itself involves fetching & parsing
+the resulting document). Then there's the question of handling
+failures to send & re-trying. Finally, since Webmention processing is
+generally done asynchronously, the sender has to ``check back'' to get
+the final result.
+
+@url{https://aaronparecki.com/, Aaron Precki} has built a service
+to handle this: @url{https://telegraph.p3k.io/, Telegraph}. Once
+you sign-up (using @xref{IndieAuth}, of course), you can send
+a Webmention with a single API call over HTTP.
+
+@code{indie-org} simplifies this further with
+@findex indie-org-webmentions-send
+@code{indie-org-webmentions-send} a function that takes a source,
+target, and Telegraph API token and will send the Webmention (recall
+that the precise sort of Webmention is not encoded in the protocol;
+the receiver discovers it by parsing the sender's post).
+
+We can record sent Webmentions in
+@tindex indie-org-webmentions-sent
+@code{indie-org-webmentions-sent}, another attribute of
+@code{indie-org-publication-state}. The process of taking both &
+determining what Webmentions are to be sent is encapsulated in
+@findex indie-org-webmentions-required
+@code{indie-org-webmentions-required}.
+
+So equipped, we can now code-up a function in our site's Lisp that we
+can call post-publication that will handle sending all new
+Webmentions:
+
+@lisp
+(defun my/send-webmentions (prod)
+  "Send webmentions post-publication.
+PROD shall be set to t for production and nil for staging."
+  (indie-org-enable)
+  (let* ((env (if prod :prod :staging))
+         (all-pub-states
+          (if (file-exists-p publication-state-file)
+              (indie-org-state-read publication-state-file)))
+         (publication-state
+          (or (plist-get all-pub-states env)
+              (indie-org-state-make)))
+         (webmentions-made
+          (or (indie-org-state-v2-webmentions-made publication-state)
+              (indie-org-webmentions-make-made)))
+         (webmentions-sent
+          (or (indie-org-state-v2-webmentions-sent publication-state)
+              (indie-org-webmentions-make-sent)))
+         (webmentions-to-send
+          (indie-org-webmentions-required webmentions-made webmentions-sent))
+         (token
+          (indie-org-read-token
+           telegraph-io-token-file))
+         (now (current-time)))
+    (while webmentions-to-send
+      (let* ((wm (car webmentions-to-send))
+             (location
+              (if prod
+                  ;; The source is just the page key
+                  ;; (e.g. "blog/foo.html")-- it is only here that we
+                  ;; know we're sending this for prod, so prepend the
+                  ;; "https://www.unwoundstack.com" here:
+                  (let ((src (car wm))
+                        (dst (cdr wm)))
+                    (indie-org-webmentions-send
+                     (cons (concat "https://www.coffeehouse-talker.net/" src) dst)
+                     token))
+                (message "Will send webmention: %s :=> %s" (car wm) (cdr wm))
+                nil)))
+        (indie-org-webmentions-record-sent
+         wm
+         now
+         webmentions-sent
+         location))
+      (setq webmentions-to-send (cdr webmentions-to-send)))
+    (setf (indie-org-state-v2-webmentions-sent publication-state) webmentions-sent)
+    (plist-put all-pub-states env publication-state)
+    (indie-org-state-write all-pub-states publication-state-file)))
+@end lisp
+
+@node Receiving Webmentions
+@subsection Receiving Webmentions
+
+Receiving Webmentions may seem like a particularly daunting problem for the staticly
+generated site owner. In order to receive them, we need a server capable of handling
+the HTTP posts and implement the server-side of the protocol (Webmention validation,
+asynchronous processing, possibly another endpoint at which senders can check their
+results).
+
+It turns out, there's a service for that:
+@url{https://webmention.io/dashboard, webmention.io}. Once you sign-up
+via @xref{IndieAuth}, advertise your Webmention endpoint like so:
+
+@example
+<link rel="webmention" href="https://webmention.io/indie-org.sh/webmention" />
+<link rel="pingback" href="https://webmention.io/indie-org.sh/xmlrpc" />
+@end example
+
+Webmention senders will now @code{POST} to webmention.io who will store
+them on your behalf. You can retrieve them via API call to webmention.io.
+
+@code{indie-org} handles this for you via
+@findex indie-org-webmentions-check
+@code{indie-org-webmentions-check}. This function takes the domain name
+for which you are checking Webmentions, your webmtion.io API token, and
+an
+@tindex indie-org-webmentions-received
+@code{indie-org-webmentions-received} struct (another attribute of
+@code{indie-org-publication-state}). @code{indie-org-webmentions-check}
+will update the struct with any new Webmentions made.
+
+So armed, we can add a method to our site's Lisp, meant to be invoked
+periodically, for checking Webmentions made to our site:
+
+@lisp
+(defun my/check-webmentions ()
+  "Check for new webmentions; update publication state."
+  (indie-org-enable)
+  (let* ((env :prod) ;; no staging support ATM
+         (publication-state
+          (if (file-exists-p publication-state-file)
+              (indie-org-state-read publication-state-file)))
+         (state-for-env
+          (or (plist-get publication-state env) (indie-org-state-make)))
+         (webmentions-received
+          (or (indie-org-state-v2-webmentions-received state-for-env)
+              (indie-org-webmentions-make-received)))
+         (token
+          (indie-org-read-token
+           webmentions-io-token-file)))
+    (indie-org-webmentions-check "indie-org.sh" token webmentions-received)
+    (setf (indie-org-state-v2-webmentions-received state-for-env) webmentions-received)
+    (plist-put publication-state env state-for-env)
+    (indie-org-state-write publication-state publication-state-file)))
+@end lisp
+
+The site owner will need to arrange for this method to be invoked on a regular basis, perhaps
+as a cron job. If the owner wishes to display mentions as part of their page template(s), they
+will need to re-publish on receipt of new Webmentions.
+
+@node Supporting POSSE
+@section Supporting POSSE
+
+Adding @xref{POSSE} to one's site is a bit like @xref{Sending
+Webmentions}; simple in principle, but once one begins digging into
+the details it can quickly become daunting. Also like sending
+Webmentions, there's a service that takes this off our hands:
+@url{https://brid.gy/, brid.gy, brid.gy}.
+
+brid.gy @url{https://brid.gy/about#publish-types, supports, supports}
+publishing:
+
+@enumerate
+
+@item
+Twitter tweets & Mastodon toots
+
+@item
+photos to Flickr
+
+@item
+all sorts of things to Github
+
+@item
+@end enumerate
+
+@c Generate the nodes for this menu with `C-c C-u C-m'.
+@menu
+* Setting-up POSSE to Twitter & Mastodon::
+* Handling Backfeed::
+* Controlling Content::
+@end menu
+
+@node Setting-up POSSE to Twitter & Mastodon
+@subsection Setting-up POSSE to Twitter & Mastodon
+
+@node Handling Backfeed
+@subsection Handling Backfeed
+
+@node Controlling Content
+@subsection Controlling Content
+
+@node Adding RSS & h-feeds
+@section Adding RSS & h-feeds
+
+@node Introducing the Notion of Post Type to Your Workflow
+@section Introducing the Notion of Post Type to Your Workflow
+
+@node Future & Roadmap
+@chapter Future & Roadmap
+
+@node Index
+@unnumbered Index
+
+@printindex cp
+
+@node Function Index
+@unnumbered Function Index
+
+@printindex fn
+
+@node Type Index
+@unnumbered Type Index
+
+@printindex tp
+
+@node Variable Index
+@unnumbered Variable Index
+
+@printindex vr
+
+@bye

@@ -115,22 +115,19 @@ project name and properties such as :base-directory,
 the sitemap feature to produce an HTML fragment containing an
 h-feed for the posts in :base-directory.
 
-BACKEND is a caller-supplied backend, presumably with a
-caller-generated :template property.
-
 The caller will presumably include this in their HTML template
 elsewhere."
   (let ((name (car project))
         (plist (copy-sequence (cdr project))))
     (setq plist (plist-put plist :auto-sitemap t))
-    (setq plist (plist-put plist :sitemap-filename sitemap-filename))
-    (setq plist (plist-put plist :publishing-function #'indie-org-h-feed--publish))
-    (setq plist (plist-put plist :sitemap-format-entry #'indie-org-h-feed--format-entry))
-    (setq plist (plist-put plist :sitemap-sort-files 'anti-chronologically))
-    (setq plist (plist-put plist :sitemap-function #'indie-org-h-feed--format-sitemap))
-    (setq plist (plist-put plist :hfeed-name feed-title))
     (setq plist (plist-put plist :description feed-description))
     (setq plist (plist-put plist :h-feed-backend 'indie-org-h-feed))
+    (setq plist (plist-put plist :hfeed-name feed-title))
+    (setq plist (plist-put plist :publishing-function #'indie-org-h-feed--publish))
+    (setq plist (plist-put plist :sitemap-filename sitemap-filename))
+    (setq plist (plist-put plist :sitemap-format-entry #'indie-org-h-feed--format-entry))
+    (setq plist (plist-put plist :sitemap-function #'indie-org-h-feed--format-sitemap))
+    (setq plist (plist-put plist :sitemap-sort-files 'anti-chronologically))
     (setq plist (plist-put plist :with-toc nil))
     (cons name plist)))
 

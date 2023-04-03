@@ -1,3 +1,8 @@
+2023-04-06  Michael Herstine  <sp1ff@pobox.com>
+
+	First commit of the indie-org Texinfo manual.
+	The manual is incomplete.
+
 2023-03-11  Michael Herstine  <sp1ff@pobox.com>
 
 	Added the :url field to `indie-org-webmentions-received-wm`.

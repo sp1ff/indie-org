@@ -1,0 +1,46 @@
++------+
+| make |   emacs -l lisp/indie-org.sh.el --eval '(iosh/publish)'
++------+                                                     org-publish-project-alist
+   |     +-------+                                            +-------+
+   +---> | emacs |                  +-----------------------> |       |   make iosh/publish-page-to-html
+         +-------+                  | 1.                      |       |   the :publishing-function
+             |        +--------------+                        |       |
+             +------> | iosh/publish |                        +-------+
+                      +--------------+                             ^
+                            | 2.         +-----------------+       |
+                            +----------> | org-publish-all |       |
+                                         +-----------------+       |
+                                                  |           +----------------------+
+                                                  +---------> | org-publish-projects |
+                                                              +----------------------+
+                                         +------------------+          |
+                                         | org-publish-file | <--------+
+                                         +------------------+
+                                                  |
+                                        plist, filename, pub-dir
+                 +---------------------------+    |
+                 | iosh/publish-page-to-html | <--+
+                 +---------------------------+
+                                    |
+                 iosh/page-html, filename, extension, plist, pub-dir
+       +--------------------+       |
+       | org-publish-org-to | <-----+
+       +--------------------+
+                    |
+          iosh/page-html, output
+                    |          +--------------------+
+                    +--------> | org-export-to-file |
+                               +--------------------+
+                                          |                             2. transcodes the
+                                    iosh/page-html                      resulting parse tree
+                                          |             +---------------+
+                                          +-----------> | org-export-as |
+                                                        +---------------+
+                                                               |
+                                   1. calls functions          | 3. ask the template to
+                                   in :filter-parse-tree       | render the final HTML
+                                                               |
+                                                               v
+                                                        +----------------+
+                                   4. finalize          | iosh/page-html |
+                                   the page             +----------------+
