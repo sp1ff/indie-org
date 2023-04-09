@@ -4,7 +4,7 @@
  | https://alice.net |                                          endpoint?                            | https://www.bob.me |
  +-------------------+               4. it does! --+                                                 +--------------------+
                                                    |
-  1. https://alice.net/think.html                  |                    2. https://www.bob.me/i-saw-a-thing.html
+  1. https://alice.net/thing.html                  |                    2. https://www.bob.me/i-saw-a-thing.html
      +---------------------------------------------|--------------+        +------------------------------------------------+
      |<head>                                       v              |        |...                                             |
      |<link rel="webmention" href=https://alice.net/webmention/"/>|        |<body>                                          |

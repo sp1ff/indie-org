@@ -407,12 +407,12 @@ Return an indie-org-posse-response-v2."
                             :type (alist-get 'typd data))))
                     ((eq symbol-status 'error)
                      (message "While sending POSSE request %s :=> %s, got:" source target)
-                     (message "    data: %s" data)
-                     (message "  symbol: %s" symbol-status)
-                     (message "response: %s" error-thrown)
+                     (message "    data: %S" data)
+                     (message "  symbol: %S" symbol-status)
+                     (message "response: %S" error-thrown)
                      (let* ((original (alist-get 'original data)))
                        (if original
-                           (setq rsp (indie-org-posse-make-response
+                           (setq rsp (indie-org-posse-make-response-v2
                                       :sort posse-target
                                       :created-at (alist-get 'created_at original)
                                       :id (alist-get 'id original)

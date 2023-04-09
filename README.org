@@ -2,7 +2,7 @@
 #+DESCRIPTION: Org-export on the Indieweb
 #+AUTHOR: Michael
 #+EMAIL: sp1ff@pobox.com
-#+DATE: <2023-04-06 Thu 16:45>
+#+DATE: <2023-04-09 Sun 15:39>
 #+AUTODATE: t
 
 * Introduction
@@ -38,7 +38,7 @@ The build process _does_ make an Emacs package, so you can also do:
   make dist
 #+END_SRC
 
-to produce an Emacs package file (=indie-org-0.5.1.tar=) which you can install with =package-install-file= in your Emacs.
+to produce an Emacs package file (=indie-org-0.5.2.tar=) which you can install with =package-install-file= in your Emacs.
 * Hacking
 
 ** Environment Variables

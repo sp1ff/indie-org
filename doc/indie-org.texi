@@ -56,8 +56,6 @@ Putting Org mode on the Indieweb.
 
 This manual corresponds to indie-org version @value{VERSION}.
 
-This manual is work in progress.
-
 @c Generate the nodes for this menu with `C-c C-u C-m'.
 @menu
 * Introduction::
@@ -104,7 +102,7 @@ parlance).
 
 @code{indie-org} is an Emacs package for integrating an Org-generated,
 static site with the Indieweb. This manual describes @code{indie-org}
-for the interested site author.  Throughout, itwill reference a simple
+for the interested site author.  Throughout, it will reference a simple
 static site, @url{https://indie-org.sh,indie-org.sh}. It is live on
 the web, and its source is available at
 @url{https://github.com/sp1ff/indie-org.sh,Github}. The reader may
@@ -154,6 +152,7 @@ This manual is a step in that direction on the author's part.
 
 This section covers a few aspects of the Indieweb that are pertinent
 to @code{indie-org}.
+
 @c Generate the nodes for this menu with `C-c C-u C-m'.
 @menu
 * Microformats::
@@ -406,7 +405,7 @@ The Org Export publication process, in broad terms, looks like this:
 
 The main entrypoint to the Org Export facility is @xref{Triggering
 Publication, org-publish-all, org-publish-all, org}.
-@findex
+@findex org-publish-all
 @code{org-publish-all} refers to the variable @xref{Project alist,
 org-publish-project-alist, org-publish-project-alist, org}, which
 describes our publication ``project'' to Org Mode. For each project
@@ -434,11 +433,10 @@ directory, and the project plist.
 posts. Each employs a lambda as its @code{publishing-function}; the
 lambdas simply provide one more argument to the true publishing
 implementation, @code{iosh/publish-page}. The additional argument is
-the Org Export
-@xref{Adding Export Back-ends, Back-end, Back-end, org, Adding Export Back-ends}
-to use.
+the Org Export back-end to use ( @pxref{Adding Export Back-ends,
+Back-end, Back-end, org, Adding Export Back-ends} ).
 
-@code{iosh/publish-page} passes that back-end on
+@code{iosh/publish-page} passes that back-end on to
 @code{org-publish-org-to} and thence to @code{org-export-to-file} and
 @code{org-export-as}, which is where the real work begins. The
 function has a lot of functionality packed into its 171 lines; of note
@@ -448,12 +446,12 @@ to us, it will:
 
 @item
 Parse the buffer being exported into Org elements (see
-@xref{Org Syntax, Org Syntax, org, Org Syntax, Org Syntax})
+@pxref{Org Syntax, Org Syntax, org, Org Syntax, Org Syntax}).
 
 @item
 Give the export backend the opportunity to filter the resulting parse
 tree; we're not doing that so far in this example, but will take
-advantage of this below.
+advantage of this below (@pxref{Controlling Content}).
 
 @item
 Transcodes the resulting parse tree to HTML
@@ -694,9 +692,9 @@ When one ``publishes'' an Org Export project, each file in the project
 is copied to the destination directory and perhaps transformed in the
 process (@pxref{Publishing action, Publishing, Publishing, org, Org
 Mode, OrgMode}) The publication operation is determined by the
-project's @code{:publishing-function} configuration item, which
-defaults to @code{org-html-publish-to-html}. This function, in turn,
-invokes @code{org-publish-org-to} with the @code{html} back-end.
+project's @code{:publishing-function} property, which defaults to
+@code{org-html-publish-to-html}. This function, in turn, invokes
+@code{org-publish-org-to} with the @code{html} back-end.
 
 The details of the Org Export process are determined by the selected
 back-end (@pxref{Exporting, Exporting, Exporting, org, Org Mode, Org
@@ -742,8 +740,6 @@ next chapter, we'll add assorted IndieWeb features to it.
 * Supporting IndieAuth::
 * Supporting Webmentions::
 * Supporting POSSE::
-* Adding RSS & h-feeds::
-* Introducing the Notion of Post Type to Your Workflow::
 @end menu
 
 @node Page Keys
@@ -817,7 +813,7 @@ made by that page
 
 @item
 webmentions-sent: a mapping from page-key to a list of all Webmentions
-sent to-date by that page
+sent to-date for that page
 
 @item
 webmentions-received: a mapping from page-key to a list of all
@@ -950,7 +946,7 @@ links to their social media profiles with the @code{rel="me"}
 attribute, e.g.:
 
 @example
-<link href="https://twiiter.com/jdoe" rel="me">
+<link href="https://twitter.com/jdoe" rel="me">
 @end example
 
 On each service listed, ensure there's a link back to the site's home
@@ -1023,6 +1019,12 @@ take the opportunity to @emph{note} each of them via
 @findex indie-org-webmentions-record-webmention
 @code{indie-org-webmentions-record-webmention}
 
+For example, the author can indicate a mention like so:
+
+@example
+I am mentioning Alice's [[mention:https://alice.net/i-made-a-thing.html][post]].
+@end example
+
 The site author shall include their publication state's
 @tindex indie-org-webmentions-made
 @code{indie-org-webmentions-made} (@pxref{Publication Environments &
@@ -1031,14 +1033,53 @@ State}) in the project properties (under the name
 types will, first, produce @xref{Microformats} appropriate to the sort
 of webmention being made, then invoke
 @code{indie-org-webmentions-record-webmention} to record them in the
-current publication environment's state.
+current publication environment's state:
+
+@lisp
+(defun iosh/publish (prod)
+  "Publish indie-org.sh to production if PROD is non-nil, locally else."
+  (indie-org-enable)
+  ;; ...
+  (let* ((env (if prod :prod :local))
+         (pub-states
+          (if (file-exists-p publication-state-file)
+           (indie-org-state-read publication-state-file)
+         `(:prod ,(indie-org-state-make) :local ,(indie-org-state-make))))
+         (publication-state (plist-get pub-states env))
+         (webmentions-made
+          (or (indie-org-state-v2-webmentions-made publication-state)
+              (indie-org-webmentions-make-made)))
+         ;; ...
+         )
+    ;; This is all to setup the call to `org-publish-all'.
+    (let* (
+           ;; ...
+           (org-publish-project-alist
+            `(("indie-org.sh" :components ("h-feed" "pages" "posts" "rss"))
+              ("posts"
+               ;; ...
+               :indie-org/webmentions-made ,webmentions-made))))
+      (org-publish-all t)
+      ;; During the course of publication, we may have updated state: in
+      ;; particular, we may have made new webmentions & POSSE requests.  Update
+      ;; the publication state's most recent publication time...
+      (setf (indie-org-state-v2-last-published publication-state)   (current-time)
+            ;; along with new requests:
+            (indie-org-state-v2-webmentions-made publication-state) webmentions-made)
+      (plist-put pub-states env publication-state)
+      ;; and write it all out to disk.
+      (indie-org-state-write pub-states publication-state-file))))
+@end lisp
+
+You can see an example on @url{https://indie-org.sh, indie-org.sh}
+@url{https://indie-org.sh/posts/sending-a-wm.html, here}.
 
 @node Sending Webmentions
 @subsection Sending Webmentions
 
-At this point, assuming the site author has @xref{Making & Recording
-Webmentions, made & recorded, made & recorded} one or more
-Webmentions, they presumably want to send them.
+At this point, assuming the site author has made & recorded one or
+more webmentions (@pxref{Making & Recording Webmentions, made &
+recorded, made & recorded}), they presumably want to send them.
 
 Despite the protocol's simplicity, sending Webmentions is a
 non-trivial task. The sender needs to carry-out Webmention endpoint
@@ -1073,7 +1114,7 @@ can call post-publication that will handle sending all new
 Webmentions:
 
 @lisp
-(defun my/send-webmentions (prod)
+(defun iosh/send-webmentions (prod)
   "Send webmentions post-publication.
 PROD shall be set to t for production and nil for staging."
   (indie-org-enable)
@@ -1103,11 +1144,11 @@ PROD shall be set to t for production and nil for staging."
                   ;; The source is just the page key
                   ;; (e.g. "blog/foo.html")-- it is only here that we
                   ;; know we're sending this for prod, so prepend the
-                  ;; "https://www.unwoundstack.com" here:
+                  ;; "https://indie-org.sh" here:
                   (let ((src (car wm))
                         (dst (cdr wm)))
                     (indie-org-webmentions-send
-                     (cons (concat "https://www.coffeehouse-talker.net/" src) dst)
+                     (cons (concat "https://indie-org.sh" src) dst)
                      token))
                 (message "Will send webmention: %s :=> %s" (car wm) (cdr wm))
                 nil)))
@@ -1157,7 +1198,7 @@ So armed, we can add a method to our site's Lisp, meant to be invoked
 periodically, for checking Webmentions made to our site:
 
 @lisp
-(defun my/check-webmentions ()
+(defun iosh/check-webmentions ()
   "Check for new webmentions; update publication state."
   (indie-org-enable)
   (let* ((env :prod) ;; no staging support ATM
@@ -1206,32 +1247,209 @@ photos to Flickr
 all sorts of things to Github
 
 @item
+Reddit
 @end enumerate
+
+as well as a growing list of sites.
 
 @c Generate the nodes for this menu with `C-c C-u C-m'.
 @menu
-* Setting-up POSSE to Twitter & Mastodon::
+* Setting-up POSSE to Mastodon::
 * Handling Backfeed::
 * Controlling Content::
 @end menu
 
-@node Setting-up POSSE to Twitter & Mastodon
-@subsection Setting-up POSSE to Twitter & Mastodon
+@node Setting-up POSSE to Mastodon
+@subsection Setting-up POSSE to Mastodon
+
+This subsection will describe the process of adding POSSE to an Org
+Export-generated site, using @url{https://indie-org.sh, indie-org.sh}
+as an example. It will focus on Mastodon.
+
+The first step is to sign-up at @url{https://brid.gy/, brid.gy}. There
+are @emph{extensive} docs at @url{https://brid.gy/about}. When you
+land on the home page, you'll be asked to click on a tile representing
+the account to which you want to enable POSSE. On clicking
+``Mastodon'', you'll be asked whether you want to post to a Mastodon
+account or connect to the fediverse. Select the former. You'll next be
+asked for the address of your Mastodon instance, where you'll have to
+sign-in. Once you've authenticated there, you'll be asked for the
+address of your site-- that's it.
+
+As an aside, @url{https://brid.gy/, brid.gy} works via
+@xref{Webmentions}, both for accepting POSSE requests and for
+backfeeding responses to your POSSE'd content, so you'll need
+Webmention support, first.
+
+@code{indie-org} integrates POSSE support into Org Mode, first by
+defining a new keyword, @code{#+POSSE}. When authoring one's document,
+one expresses a desire for POSSE by setting it like so:
+
+@example
+#+TITLE: My Post
+#+AUTHOR: me
+#+POSSE: mastodon flickr
+...
+@end example
+
+During the @xref{Customizing the Publication Process, Publication
+Process, Publication Process}, @code{indie-org} will note the POSSE
+requests & record them in the publication state for future reference
+(Cf.
+@tindex indie-org-posse-requests
+@code{indie-org-posse-requests}).
+
+@code{indie-org} also handles @emph{sending} the requests and recording
+the responses in
+@findex indie-org-send-posse-request
+@code{indie-org-send-posse-request}. The response can be recorded
+with the publication state in
+@findex indie-org-record-sent-posse
+@code{indie-org-record-sent-posse}. Given an
+@code{indie-org-posse-requests} instance and and instance of
+@tindex indie-org-posse-responses
+@code{indie-org-posse-responses}, the outstanding requests (i.e. the
+POSSE requests that still need to be sent) may be found with
+@findex indie-org-posse-required
+@code{indie-org-posse-required}.
+
+So equipped, we can give ourselves another function:
+
+@lisp
+(defun iosh/send-posse-requests (prod)
+  "Send POSSE requests post-publication.
+PROD shall be t to select production & nil to select staging."
+  (message "Sending POSSE requests (if any)...")
+  (indie-org-enable)
+  (let* ((env (if prod :prod :local))
+         (all-pub-states
+          (if (file-exists-p publication-state-file)
+              (indie-org-state-read publication-state-file)))
+         (publication-state
+          (or (plist-get all-pub-states env)
+              (indie-org-state-v2-make-publication-state)))
+         (requests
+          (or (indie-org-state-v2-posse-requests publication-state)
+              (indie-org-posse-make-requests)))
+         (responses
+          (or (indie-org-state-v2-posse-responses publication-state)
+              (indie-org-posse-make-responses)))
+         (to-send
+          (indie-org-posse-required requests responses)))
+    ;; `to-send' will be a list of cons cells, each of whose car is a
+    ;; page key & whose cdr is a list of POSSE symbols.
+    (while to-send
+      (let* ((page-key (caar to-send))
+             (source
+              (concat
+               "https://indie-org.sh/"
+               page-key))
+             (symbols (cdar to-send)))
+        (while symbols
+          (if prod
+              (let ((rsp (indie-org-send-posse-request source (car symbols))))
+                (indie-org-record-sent-posse page-key rsp responses))
+            (message "Will send POSSE request: %s :=> %s" source (car symbols)))
+          (setq symbols (cdr symbols))))
+      (setq to-send (cdr to-send)))
+    (setf (indie-org-state-v2-posse-responses publication-state) responses)
+    (plist-put all-pub-states env publication-state)
+    (indie-org-state-write all-pub-states publication-state-file))
+    (message "Sending POSSE requests (if any)...done."))
+@end lisp
 
 @node Handling Backfeed
 @subsection Handling Backfeed
 
+@url{https://brid.gy/, brid.gy} automatically polls whatever silo
+you've connected to your site, looking for likes, responses, reposts,
+and so forth.  It will then relay that information back to your site
+through... @xref{Webmentions}.
+
+As an example, the author went to the Mastodon
+@url{https://emacs.ch/@@indieorg/110166100570561214, post} POSSE'd from
+@url{https://indie-org.sh/posts/what-is-indie-org.sh.html, What Is
+indie-org.sh?} and favorited it. After the next poll, a Webmention
+arrived representing that like and is now displayed
+@url{https://indie-org.sh/posts/what-is-indie-org.sh.html, here}.
+
 @node Controlling Content
 @subsection Controlling Content
 
-@node Adding RSS & h-feeds
-@section Adding RSS & h-feeds
+When POSSE'ing to space-limited fora such as Twitter & Mastodon, it
+can be inconvenient to have a lengthy post truncated by the target
+platform. @url{https://brid.gy/, brid.gy}
+@url{https://brid.gy/about#silo-content, offers} the ability to
+specify platform-specific text to be sent to the target silo.
 
-@node Introducing the Notion of Post Type to Your Workflow
-@section Introducing the Notion of Post Type to Your Workflow
+We can take advantage of the Org Export back-end feature
+@code{:filters-alist} to make this more
+convenient. @code{:filters-alist} is a property list defining various
+filters to be applied to the Org document during publication. Salient
+to our purposes is @code{:filter-parse-tree}: this filter is applied
+to the Org document's abstract syntax tree after the initial parse.
+
+@code{indie-org.sh} sets this filter to the function
+@code{iosh/post/filter-parse-tree}; it will search for a top-level Org
+heading tagged with @code{toot-text}. If found, that heading will be
+removed from the parse tree, but the contents will be used when
+POSSE'ing to Twitter & Mastodon.
+
+For instance:
+
+@example
+#+TITLE: My Post
+#+DESCRIPTION: I made a thing
+...
+
+* Introduction
+This is a very long post....
+
+* The First Thing
+...
+
+blah. Blahblahblah.
+
+* Mastodon          :toot-text:
+I wrote a very long post!
+@end example
+
+When this document is POSSE'd to Mastodon, only the text ``I wrote a
+very long post!'' will appear, along with a link to the original
+document.
 
 @node Future & Roadmap
 @chapter Future & Roadmap
+
+Both the @code{indie-org} package and the demonstration site
+@url{https://indie-org.sh} are early code, and the author has tried to
+indicate that with the @code{0.x} version number for the package.
+
+In order to use @code{indie-org} successfully, the site author is
+going to need to be familiar with the Org Export facility
+(@pxref{Exporting, Org Export, Org Export, org, Org Export}) and
+comfortable with @xref{top, Emacs Lisp, Emacs Lisp, elisp, Emacs
+Lisp}.  That said, if one is hosting an Org Mode staticly-generated
+site, those requirements are likely already met.
+
+All that said, the recent
+@url{https://snarfed.org/2023-04-03_so-long-twitter-api-and-thanks-for-all-the-fish,
+meltdown} at Twitter, shutting-down API access to numerous
+applications including @url{https://brid.gy/, brid.gy}, only
+reinforces the imperitive to take control of our own identity, data &
+platform.
+
+Furthermore, @code{indie-org} is not just an experiment: I'm using it
+today with my personal @url{https://www.unwoundstack.com, site}.
+
+The author gave a
+@url{https://www.youtube.com/watch?v=48RoqMbhftg&list=PLomc4HLgvuCUIwab7EynU78rerDXfFyR_&index=57&t=2s,
+talk} on one small part of this at @url{https://emacsconf.org/2022/,
+EmacsConf}. The documentation is hosted on-line
+@url{https://www.unwoundstack.com/doc/indie-org/curr/indie-org.html,
+here}.
+
+Bug reports & feature requests are welcome at @email{sp1ff@@pobox.com}.,
 
 @node Index
 @unnumbered Index

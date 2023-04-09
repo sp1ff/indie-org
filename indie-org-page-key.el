@@ -57,8 +57,11 @@ The channel must have been provisioned with the
 DOMAIN-WITH-AUTHORITY is the \"scheme\" along with the top-level
 domain (https://foo.net, e.g).  TARGET is the target of a
 Webmetion (https://foo.net/a/b/c.html, e.g.)."
-  (and (string-prefix-p domain-with-authority target)
-       (substring target (1+ (length domain-with-authority)))))
+  (if (string-prefix-p domain-with-authority target)
+      ;; handle the case of just "https://indie-org.sh"
+      (if (eq (length target) (length domain-with-authority))
+          "index.html"
+        (substring target (1+ (length domain-with-authority))))))
 
 
 (provide 'indie-org-page-key)
