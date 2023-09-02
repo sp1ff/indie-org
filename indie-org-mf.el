@@ -21,6 +21,7 @@
 
 ;;; Code:
 
+;;;###autoload
 (defun indie-org-mf-check-entity (entity ty props &optional check-props-exist)
   "Verify ENTITY has type TY & properties PROPS.
 If CHECK-PROPS-EXIST is non-nil, PROPS shall be a list of properties to be
@@ -53,6 +54,7 @@ PROPS shall be a list of alternating property keywords (:photo,
             (error "Expected a value for %s of %s, got %s" prop val actual))
           (setq props (cddr props)))))))
 
+;;;###autoload
 (defun indie-org-mf-check-children (entity ty props &optional check-props-exist)
   "Verify the children of ENTITY are of type TY & have properties PROPS.
 If CHECK-PROPS-EXIST is non-nil, PROPS shall be a list of properties to be

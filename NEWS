@@ -1,10 +1,12 @@
 indie-org News -- history of user-visible changes                -*- outline -*-
 
-* indie-org 0.5
+* indie-org 0.6
 
-** 0.5.3 build
+** 0.6.0 build
 
 *** indie-org-h-feed now works (partial h-feeds only)
+* indie-org 0.5
+
 ** 0.5.2 build
 
 *** second draft of the Texinfo manual

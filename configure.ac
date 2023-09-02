@@ -1,6 +1,6 @@
 # Process this file with autoconf to produce a configure script.  -*- Autoconf -*-
 AC_PREREQ([2.71])
-AC_INIT([indie-org], [0.5.2], [sp1ff@pobox.com], [indie-org], [https://github.com/sp1ff/indie-org])
+AC_INIT([indie-org], [0.6.0], [sp1ff@pobox.com], [indie-org], [https://github.com/sp1ff/indie-org])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_SRCDIR([./indie-org.el])
 

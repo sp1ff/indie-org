@@ -1,6 +1,25 @@
+2023-09-02  Michael Herstine  <sp1ff@pobox.com>
+
+	Make release 0.6.0.
+
+2023-09-02  Michael Herstine  <sp1ff@pobox.com>
+
+	Update indie-org-h-feed to produce a working partial h-feed.
+	`indie-org-h-feed` had been broken, as well as containing some
+	misleading functions. It was never capable of producing a
+	full h-feed (and the partial h-feeds it produced were broken).
+	This update fixes all that.
+
+	Also:
+
+	  - Update `actions/checkout` to v3 from v2.
+	  - Clean-up a few lints.
+
 2023-04-09  Michael Herstine  <sp1ff@pobox.com>
 
-	Documentation update
+	Documentation update.
+	Second pass through the Texinfo manual; update to error logging
+	when sending POSSE requests.
 
 2023-04-06  Michael Herstine  <sp1ff@pobox.com>
 
