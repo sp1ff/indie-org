@@ -32,7 +32,7 @@ jobs:
     if: ${{ needs.filter-tag-from-commit.outputs.is_commit == 'yes' }}
     steps:
     - name: Checkout repo
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Install tooling
       shell: bash
       run: |

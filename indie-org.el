@@ -33,6 +33,7 @@
 (require 'indie-org-state)
 (require 'indie-org-pub)
 (require 'indie-org-h-feed)
+(require 'indie-org-mf)
 
 (require 'ox)
 (require 'ox-rss)
@@ -48,17 +49,6 @@
   (with-temp-buffer
     (insert-file-contents filename)
     (string-trim (buffer-string))))
-
-(defun indie-org-plain-text (contents info)
-  "Convert plain text into html encoded text.
-CONTENTS shall be Org-down.
-INFO is a plist used as a communications channel.
-
-Shamelessly copied from `ox-rss.el'"
-  (let (output)
-    (setq output (org-html-encode-plain-text contents)
-	        output (org-export-activate-smart-quotes
-		              output :html info))))
 
 ;;;###autoload
 (defun indie-org-enable ()

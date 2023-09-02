@@ -1449,7 +1449,7 @@ EmacsConf}. The documentation is hosted on-line
 @url{https://www.unwoundstack.com/doc/indie-org/curr/indie-org.html,
 here}.
 
-Bug reports & feature requests are welcome at @email{sp1ff@@pobox.com}.,
+Bug reports & feature requests are welcome at @email{sp1ff@@pobox.com}.
 
 @node Index
 @unnumbered Index

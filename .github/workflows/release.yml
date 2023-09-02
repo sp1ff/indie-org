@@ -24,7 +24,7 @@ jobs:
       if: env.RELEASE_VERSION == ''
       run: echo "RELEASE_VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
     - name: Checkout repo
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Create artifacts directory
       run: mkdir artifacts
     - name: Install tooling
