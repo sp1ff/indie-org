@@ -61,7 +61,9 @@ will add it to `org-export-filter-final-output-functions'."
 (defun indie-org-pub-find-posts (project-dir exclude-drafts &rest kwargs)
   "Determine which posts in PROJECT-DIR are to be included.
 Set EXCLUDE-DRAFTS to t to exclude drafts.
-KWARGS recognizes :exclude; a list of files to be excluded.
+KWARGS recognizes :exclude; a list of files to be excluded, along
+with :tags-- a list of strings.  If non-nil, only posts with one
+or more of these tags will be included in the feed.
 
 `indie-org' introduces the export option DRAFT which can be used
 to exclude posts from publication.  Use this method to assemble a
@@ -74,6 +76,7 @@ will be excluded (else all posts will be included).  The optional
 keyword argument :exclude can be used to provide a list of files
 to be excluded-- this is handy for sitemaps, e.g."
   (let ((excludes (plist-get kwargs :exclude))
+        (tags (plist-get kwargs :tags))
         ;; This is a bit of a hack: `org-publish-find-property'
         ;; requires the Org Export project, which is really
         ;; irritating, since this function is presumably being used to
@@ -87,7 +90,11 @@ to be excluded-- this is handy for sitemaps, e.g."
        (if (and (not (member dirent excludes))
                 (or (not exclude-drafts)
                     (not (org-publish-find-property
-                          dirent :draft pseudo-project 'indie-org))))
+                          dirent :draft pseudo-project 'indie-org)))
+                (or (not tags)
+                    (seq-intersection
+                     tags
+                     (org-publish-find-property dirent :filetags pseudo-project 'indie-org))))
            (setq out (cons dirent out))))
      (directory-files project-dir nil ".*\\.org$"))
     out))

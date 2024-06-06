@@ -5,7 +5,9 @@ autom4te.cache
 build-aux
 configure
 *.gz
+*.tar
 *.xz
 *.zst
+*.zstd
 env.sh
 run-lints
