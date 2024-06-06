@@ -2,6 +2,9 @@ indie-org News -- history of user-visible changes                -*- outline -*-
 
 * indie-org 0.6
 
+** 0.6.1 build
+
+*** Added the :tags keyword to `indie-org-pub-find-posts'
 ** 0.6.0 build
 
 *** indie-org-h-feed now works (partial h-feeds only)
