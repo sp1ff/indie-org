@@ -73,12 +73,8 @@ properties to each item that I can use when I publish to HTML."
                      "%Y-%m-%d %H:%M"
                      (org-publish-find-date entry project)))
               (updated
-               (let ((val
-                      (org-publish-find-property entry :updated project 'indie-org)))
-                 (if val
-                     (format-time-string
-                      "%Y-%m-%d %H:%M"
-                      (org-time-string-to-time (org-element-interpret-data val)))))))
+               (let ((tm (indie-org-updated-time entry project)))
+                 (and tm (format-time-string "%Y-%m-%d %H:%M" tm)))))
           (with-temp-buffer
             (org-mode)
             (insert (format "* [[file:%s][%s]]\n" entry title))

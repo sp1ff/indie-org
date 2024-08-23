@@ -21,8 +21,9 @@
 
 ;;; Code
 (require 'indie-org-page-key)
-(require 'indie-org-webmentions)
 (require 'indie-org-posse)
+(require 'indie-org-updated)
+(require 'indie-org-webmentions)
 
 (require 'ox-publish)
 
@@ -45,12 +46,7 @@ will add it to `org-export-filter-final-output-functions'."
            (input-file (plist-get info :input-file))
            (publish-date (org-publish-find-date input-file info))
            (updated
-            (let ((val
-                   (org-publish-find-property input-file :updated info 'indie-org)))
-              (if val
-                  (org-time-string-to-time
-                   (org-element-interpret-data
-                    val))))))
+            (indie-org-updated-time input-file info)))
       ;; `mentions' is just a list of URLs I've mentioned on this page.
       (indie-org-webmentions-update-made
        webmentions-made
@@ -109,18 +105,22 @@ KWARGS recognizes :exclude; a list of files to be excluded."
     (mapc
      (lambda (dirent)
        (unless (member dirent excludes)
-         (if (org-publish-find-property dirent :draft pseudo-project 'indie-org)
-             (setq drafts (cons dirent drafts))
-           (setq published (cons dirent published)))))
+         (let ((tm (float-time (indie-org-updated-time-or-date dirent pseudo-project))))
+           (if (org-publish-find-property dirent :draft pseudo-project 'indie-org)
+               (setq drafts (cons (cons tm dirent) drafts))
+             (setq published (cons (cons tm dirent) published))))))
      (directory-files posts-dir nil ".*\\.org$"))
-    (message "Published:")
-    (while published
-      (message "    %s" (car published))
-      (setq published (cdr published)))
-    (message "Drafts:")
-    (while drafts
-      (message "    %s" (car drafts))
-      (setq drafts (cdr drafts)))))
+    (message "drafts: %s" drafts)
+    (let ((published (mapcar #'cdr (sort published :key #'car :lessp #'>)))
+          (drafts (mapcar #'cdr (sort drafts :key #'car :lessp #'>))))
+      (message "Published:")
+      (while published
+        (message "    %s" (car published))
+        (setq published (cdr published)))
+      (message "Drafts:")
+      (while drafts
+        (message "    %s" (car drafts))
+        (setq drafts (cdr drafts))))))
 
 (defun indie-org-pub-webmentions-received-at-pub (info received)
   "Retrieve the webmentions received for a page at publication time.
