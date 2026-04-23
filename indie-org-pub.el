@@ -44,9 +44,18 @@ will add it to `org-export-filter-final-output-functions'."
            ;; 👇 needs to be an indie-org-webmentions-made instance
            (webmentions-made (plist-get info :indie-org/webmentions-made))
            (input-file (plist-get info :input-file))
-           (publish-date (org-publish-find-date input-file info))
+           ;; `info' is different than `project'! It has no car consisting of
+           ;; the project name, which `org-publish-find-date' requires. That
+           ;; said, it's already been parsed into the plist, so we can retrieve
+           ;; it there.
+           (publish-date
+            (let* ((data (plist-get info :date))
+                   (raw-data (if data (org-element-property :raw-value (car data)))))
+              (when raw-data (org-time-string-to-time raw-data))))
            (updated
-            (indie-org-updated-time input-file info)))
+            (let* ((data (plist-get info :updated))
+                   (raw-data (if data (org-element-property :raw-value (car data)))))
+              (when raw-data (org-time-string-to-time raw-data)))))
       ;; `mentions' is just a list of URLs I've mentioned on this page.
       (indie-org-webmentions-update-made
        webmentions-made
@@ -102,6 +111,7 @@ KWARGS recognizes :exclude; a list of files to be excluded."
         (drafts)
         (excludes (plist-get kwargs :exclude))
         (pseudo-project (list "pseudo" :base-directory posts-dir)))
+    (org-publish-initialize-cache "pseudo")
     (mapc
      (lambda (dirent)
        (unless (member dirent excludes)
@@ -170,6 +180,8 @@ RESPONSES shall be an `indie-org-posse-responses' instance."
                      (:posse "POSSE" nil nil split)))
   (add-to-list
    'org-export-filter-final-output-functions
+   ;; BUG-- I think this function "must return a string that will be used as
+   ;; the final export output"
    (lambda (_text backend info)
      (indie-org-pub-finalize-page backend info))))
 

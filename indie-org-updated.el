@@ -36,9 +36,8 @@ is :base-directory."
 
 (defun indie-org-updated-time-or-date (file project)
   "Return FILE's updated property, or date otherwise.
-The date will be in the form of a Lisp timesetamp.
+The date will be in the form of a Lisp timestamp.
 PROJECT is the current project."
-
   (or (indie-org-updated-time file project)
       (time-convert (org-publish-find-date file project) t)))
 
@@ -47,6 +46,8 @@ PROJECT is the current project."
 PROJECT is the current project."
   (or (indie-org-updated-time file project) (funcall oldfun file project)))
 
+;; Handy when forming the site map, which will order items by what
+;; org-publish-find-date
 (defun indie-org-updated-advise-find-date (_project)
   "Advise `org-publish-find-date' to return UPDATED, if available.
 

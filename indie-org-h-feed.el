@@ -51,6 +51,8 @@ PUB-DIR is when the output will be placed."
            filename ".html"
            plist pub-dir)))))
 
+(defvar indie-org-h-feed--original-find-date nil)
+
 (defun indie-org-h-feed--format-entry-partial (entry style project)
   "Format ENTRY for an h-feed.
 ENTRY is a file name.  STYLE is either `list' or `tree'.  PROJECT
@@ -60,6 +62,7 @@ This function is suitable for use as a :sitemap-format-entry
 value.  I use it to transcode a sitemap entry from a bulleted
 list item to a level one headline.  This lets me attach assorted
 properties to each item that I can use when I publish to HTML."
+
   (let ((dsc
          (org-publish-find-property entry :description project
                                     'indie-org-partial-h-feed)))
@@ -69,6 +72,10 @@ properties to each item that I can use when I publish to HTML."
        ((not (directory-name-p entry))
 	      (let ((link (concat (file-name-sans-extension entry) ".html"))
               (title (org-publish-find-title entry project))
+              (orig-pub-date
+               (format-time-string
+                "%Y-%m-%d %H:%M"
+                (funcall indie-org-h-feed--original-find-date entry project)))
               (date (format-time-string
                      "%Y-%m-%d %H:%M"
                      (org-publish-find-date entry project)))
@@ -81,7 +88,8 @@ properties to each item that I can use when I publish to HTML."
             (org-insert-property-drawer)
             (org-set-property "U_URL" link)
             (org-set-property "P_NAME" title)
-            (org-set-property "PUBDATE" date)
+            (org-set-property "PUBDATE" (or updated date))
+            (org-set-property "ORIG_PUBDATE" orig-pub-date)
             (org-set-property "P_SUMMARY" dsc)
             (if updated
                 (org-set-property
@@ -130,6 +138,7 @@ communication channel."
            (post-prefix (plist-get info :h-feed-post-prefix))
            (permalink (concat post-prefix "/" (org-element-property :U_URL headline)))
            (dsc (org-element-property :P_SUMMARY headline))
+           (origpub (org-element-property :ORIG_PUBDATE headline))
            (pubdate (org-element-property :PUBDATE headline))
            (updated (org-element-property :UPDATED headline)))
       ;; `updated' is possibly nil
@@ -141,12 +150,9 @@ communication channel."
         (if updated
             (format
              "updated <time class=\"dt-updated\">%s</time>, \
-originally published "
-             pubdate)
-          "published ")
-        (format
-         "<time class=\"dt-published\">%s</time>"
-         pubdate)
+originally published %s"
+             updated origpub)
+          (format "published <time class=\"dt-published\">%s</time>" pubdate))
         "</li>")
        title
        permalink
@@ -191,6 +197,7 @@ h-feed for the posts in :base-directory.
 
 The caller will presumably include this in their HTML template
 elsewhere."
+  (setq indie-org-h-feed--original-find-date (symbol-function 'org-publish-find-date))
   (let ((name (car project))
         (plist (copy-sequence (cdr project))))
     (setq plist (plist-put plist :auto-sitemap t))

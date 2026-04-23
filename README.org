@@ -2,7 +2,7 @@
 #+DESCRIPTION: Org-export on the Indieweb
 #+AUTHOR: Michael
 #+EMAIL: sp1ff@pobox.com
-#+DATE: <2023-09-02 Sat 16:30>
+#+DATE: <2026-04-23 Thu 06:24>
 #+AUTODATE: t
 
 * Introduction
@@ -57,7 +57,7 @@ The author wraps all this up in a file that he sources into his shell for develo
   export PRECOMMIT_EMACSFLAGS="-L ~/.emacs.d/elpa/package-lint-20221003.1636"
   export EMACSLOADPATH=$HOME/code/projects/indie-org:\
   $HOME/code/projects/indie-org/test:\
-  /opt/emacsen/current/share/emacs/30.0.50/lisp
+  /opt/emacsen/current/share/emacs/31.0.50/lisp
 #+END_SRC
 * Status & Roadmap
 
